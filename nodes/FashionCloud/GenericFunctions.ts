@@ -219,12 +219,35 @@ function timezoneOffsetMs(instant: number, timeZone: string): number {
 	return wallClockAsUtc - Math.floor(instant / 1000) * 1000;
 }
 
+const DAY_MS = 24 * 60 * 60 * 1000;
+
+/**
+ * Instant at which the clocks in `timeZone` show the given wall-clock time. The offset
+ * depends on the instant, so both offsets around a possible clock change are tried.
+ * A time that occurs twice (clocks set back) or not at all (clocks set forward)
+ * resolves to the earlier instant, so an "updated since" filter never skips data.
+ */
+function wallClockToInstant(wallClockAsUtc: number, timeZone: string): number {
+	const offsets = [
+		timezoneOffsetMs(wallClockAsUtc - DAY_MS, timeZone),
+		timezoneOffsetMs(wallClockAsUtc + DAY_MS, timeZone),
+	];
+	const candidates = offsets.map((offset) => wallClockAsUtc - offset);
+	const valid = candidates.filter(
+		(candidate, index) => timezoneOffsetMs(candidate, timeZone) === offsets[index],
+	);
+	return Math.min(...(valid.length ? valid : candidates));
+}
+
 /**
  * Converts an n8n date/time value into a full ISO 8601 UTC string. Values without
  * a timezone designator (as produced by the date picker) are interpreted in `timeZone`.
  */
 export function toIsoDate(value: unknown, timeZone = 'UTC'): string | undefined {
 	if (value === undefined || value === null || value === '') return undefined;
+	if (value instanceof Date) {
+		return isNaN(value.getTime()) ? undefined : value.toISOString();
+	}
 	let text = String(value).trim();
 	if (/^\d{4}-\d{2}-\d{2}$/.test(text)) text += 'T00:00:00';
 
@@ -236,8 +259,7 @@ export function toIsoDate(value: unknown, timeZone = 'UTC'): string | undefined 
 
 	const wallClockAsUtc = Date.parse(`${text}Z`);
 	if (isNaN(wallClockAsUtc)) return undefined;
-	const instant = wallClockAsUtc - timezoneOffsetMs(wallClockAsUtc, timeZone);
-	return new Date(instant).toISOString();
+	return new Date(wallClockToInstant(wallClockAsUtc, timeZone)).toISOString();
 }
 
 /** Reads an "Updated Since" style parameter and converts it to ISO 8601, or throws. */

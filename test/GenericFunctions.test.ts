@@ -20,13 +20,37 @@ describe('toIsoDate', () => {
 		['2025-07-01T10:00:00Z', 'Europe/Berlin', '2025-07-01T10:00:00.000Z'],
 		// date only → midnight in the timezone
 		['2025-07-01', 'UTC', '2025-07-01T00:00:00.000Z'],
+		// the hours around a clock change (Europe/Berlin: 01:00 UTC on the last Sunday)
+		['2024-03-31T01:30:00', 'Europe/Berlin', '2024-03-31T00:30:00.000Z'],
+		['2024-03-31T03:30:00', 'Europe/Berlin', '2024-03-31T01:30:00.000Z'],
+		['2024-10-27T01:30:00', 'Europe/Berlin', '2024-10-26T23:30:00.000Z'],
+		['2024-10-27T03:30:00', 'Europe/Berlin', '2024-10-27T02:30:00.000Z'],
+		['2024-03-10T01:30:00', 'America/New_York', '2024-03-10T06:30:00.000Z'],
+		['2024-03-10T03:30:00', 'America/New_York', '2024-03-10T07:30:00.000Z'],
+		['2024-11-03T00:30:00', 'America/New_York', '2024-11-03T04:30:00.000Z'],
+		['2024-11-03T02:30:00', 'America/New_York', '2024-11-03T07:30:00.000Z'],
+		// 02:30 occurs twice when clocks are set back: the earlier one, so no data is skipped
+		['2024-10-27T02:30:00', 'Europe/Berlin', '2024-10-27T00:30:00.000Z'],
+		// 02:30 doesn't exist when clocks are set forward: also the earlier instant
+		['2024-03-31T02:30:00', 'Europe/Berlin', '2024-03-31T00:30:00.000Z'],
+		// timezones without clock changes or with unusual offsets
+		['2024-06-15T12:00:00', 'Asia/Kolkata', '2024-06-15T06:30:00.000Z'],
+		['2024-01-01T00:00:00', 'Pacific/Auckland', '2023-12-31T11:00:00.000Z'],
 	])('converts %s in %s to %s', (value, timeZone, expected) => {
 		expect(toIsoDate(value, timeZone)).toBe(expected);
 	});
 
-	it.each(['', undefined, null, 'not a date'])('returns undefined for %j', (value) => {
-		expect(toIsoDate(value, 'UTC')).toBeUndefined();
+	it('takes a Date object as the instant it represents, whatever the timezone', () => {
+		const date = new Date('2024-01-01T00:00:00Z');
+		expect(toIsoDate(date, 'America/New_York')).toBe('2024-01-01T00:00:00.000Z');
 	});
+
+	it.each(['', undefined, null, 'not a date', new Date('nope')])(
+		'returns undefined for %j',
+		(value) => {
+			expect(toIsoDate(value, 'UTC')).toBeUndefined();
+		},
+	);
 });
 
 describe('fashionCloudApiRequest', () => {
