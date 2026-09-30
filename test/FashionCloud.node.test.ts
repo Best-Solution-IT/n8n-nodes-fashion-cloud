@@ -71,7 +71,7 @@ describe('execute', () => {
 			params: (i) => ({
 				resource: 'product',
 				operation: 'getStock',
-				stockGtin: i === 0 ? 'unknown' : '1',
+				stockGtin: i === 0 ? '999' : '1',
 			}),
 			items: [{ json: {} }, { json: {} }],
 			api,
@@ -95,7 +95,7 @@ describe('execute', () => {
 
 	it('without Continue On Fail, stops with the API error', async () => {
 		const { error } = await runNodeExpectingError({
-			params: { resource: 'product', operation: 'getStock', stockGtin: 'unknown' },
+			params: { resource: 'product', operation: 'getStock', stockGtin: '999' },
 			api,
 		});
 

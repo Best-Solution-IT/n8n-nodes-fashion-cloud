@@ -77,6 +77,51 @@ describe('Product → Get Many', () => {
 		expect(calls).toHaveLength(0);
 	});
 
+	// e.g. an expression like {{ $json.gtin }} where the field is missing
+	it.each([
+		['gtin', undefined, 'Product Filter is set to "GTIN", but the GTIN is empty'],
+		['gtin', '  ', 'Product Filter is set to "GTIN", but the GTIN is empty'],
+		[
+			'articleNumber',
+			'',
+			'Product Filter is set to "Article Number", but the Article Number is empty',
+		],
+	])(
+		'rejects an empty %s filter instead of listing the whole brand',
+		async (productFilter, value, message) => {
+			const { error, calls } = await runNodeExpectingError({
+				params: {
+					...getAll,
+					returnAll: true,
+					brand: 'brand-0001',
+					productFilter,
+					[productFilter]: value,
+				},
+				api,
+			});
+
+			expect(error).toBeInstanceOf(NodeOperationError);
+			expect(error.message).toBe(message);
+			expect(calls).toHaveLength(0);
+		},
+	);
+
+	it('trims the filter value', async () => {
+		const { calls } = await runNode({
+			params: {
+				...getAll,
+				returnAll: false,
+				limit: 1,
+				brand: '',
+				productFilter: 'gtin',
+				gtin: ' 4000000000042 ',
+			},
+			api,
+		});
+
+		expect(calls[0].qs).toEqual({ gtin: '4000000000042', limit: 1 });
+	});
+
 	it('maps options to query parameters and converts Updated Since to UTC', async () => {
 		const { calls } = await runNode({
 			params: {
@@ -207,6 +252,42 @@ describe('Product → Get Image', () => {
 		expect(error.message).toBe('Image ID must not be empty');
 	});
 
+	// ".." would be resolved as a relative path segment and request /v2/products/media/
+	it.each([['..'], ['.'], ['../brands'], ['a/b'], ['a b'], ['a?px=1'], ['%2e%2e']])(
+		'rejects the image ID %j before calling the API',
+		async (imageId) => {
+			const { error, calls } = await runNodeExpectingError({
+				params: { ...getImage, imageId, imageOptions: {} },
+				api,
+			});
+
+			expect(error).toBeInstanceOf(NodeOperationError);
+			expect(error.message).toBe(`Invalid Image ID "${imageId}"`);
+			expect(calls).toHaveLength(0);
+		},
+	);
+
+	it('rejects an image ID that resolves to nothing', async () => {
+		const { error, calls } = await runNodeExpectingError({
+			params: { ...getImage, imageId: undefined, imageOptions: {} },
+			api,
+		});
+
+		expect(error.message).toBe('Image ID must not be empty');
+		expect(calls).toHaveLength(0);
+	});
+
+	it('accepts image IDs with dots, dashes and underscores', async () => {
+		const dotted = createFakeApi({ images: { 'img_1.v2-a': JPEG } });
+		const { output, calls } = await runNode({
+			params: { ...getImage, imageId: 'img_1.v2-a', imageOptions: {} },
+			api: dotted,
+		});
+
+		expect(calls[0].url).toBe('/v2/products/media/images/img_1.v2-a');
+		expect(output[0].binary?.photo.fileName).toBe('img_1.v2-a.jpg');
+	});
+
 	it('reports a missing image with the API message', async () => {
 		const { error } = await runNodeExpectingError({
 			params: { ...getImage, imageId: 'missing', imageOptions: {} },
@@ -240,13 +321,38 @@ describe('Product → Get Stock', () => {
 		]);
 	});
 
-	it('URL-encodes the GTIN', async () => {
-		const { calls } = await runNodeExpectingError({
-			params: { resource: 'product', operation: 'getStock', stockGtin: '12/34' },
+	// ".." would be resolved as a relative path segment and request /v2/stock
+	it.each([['..'], ['.'], ['12/34'], ['12 34'], ['40448166abc'], ['%2e%2e']])(
+		'rejects the GTIN %j before calling the API',
+		async (stockGtin) => {
+			const { error, calls } = await runNodeExpectingError({
+				params: { resource: 'product', operation: 'getStock', stockGtin },
+				api,
+			});
+
+			expect(error).toBeInstanceOf(NodeOperationError);
+			expect(error.message).toBe(`Invalid GTIN "${stockGtin}"`);
+			expect(calls).toHaveLength(0);
+		},
+	);
+
+	it.each([[undefined], [null], ['  ']])('rejects the empty GTIN %j', async (stockGtin) => {
+		const { error, calls } = await runNodeExpectingError({
+			params: { resource: 'product', operation: 'getStock', stockGtin },
 			api,
 		});
 
-		expect(calls[0].url).toBe('/v2/products/12%2F34/stock');
+		expect(error.message).toBe('GTIN must not be empty');
+		expect(calls).toHaveLength(0);
+	});
+
+	it('accepts a GTIN given as a number', async () => {
+		const { calls } = await runNode({
+			params: { resource: 'product', operation: 'getStock', stockGtin: 4044816620478 },
+			api,
+		});
+
+		expect(calls[0].url).toBe('/v2/products/4044816620478/stock');
 	});
 
 	it('reports unknown GTINs with the API message', async () => {

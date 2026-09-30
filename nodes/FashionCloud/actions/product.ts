@@ -24,10 +24,18 @@ export async function getAll(this: IExecuteFunctions, i: number): Promise<INodeE
 
 	const qs: IDataObject = {};
 	if (brand) qs.brand = brand;
-	if (productFilter === 'gtin') {
-		qs.gtin = this.getNodeParameter('gtin', i) as string;
-	} else if (productFilter === 'articleNumber') {
-		qs.articleNumber = this.getNodeParameter('articleNumber', i) as string;
+	if (productFilter === 'gtin' || productFilter === 'articleNumber') {
+		// A selected filter without a value must not silently widen the request to the whole brand
+		const label = productFilter === 'gtin' ? 'GTIN' : 'Article Number';
+		const value = String(this.getNodeParameter(productFilter, i, '') ?? '').trim();
+		if (!value) {
+			throw new NodeOperationError(
+				this.getNode(),
+				`Product Filter is set to "${label}", but the ${label} is empty`,
+				{ itemIndex: i },
+			);
+		}
+		qs[productFilter] = value;
 	}
 
 	if (!qs.brand && !qs.gtin && !qs.articleNumber) {
@@ -64,12 +72,21 @@ export async function getAll(this: IExecuteFunctions, i: number): Promise<INodeE
 }
 
 export async function getImage(this: IExecuteFunctions, i: number): Promise<INodeExecutionData[]> {
-	const imageId = (this.getNodeParameter('imageId', i) as string).trim();
+	const imageId = String(this.getNodeParameter('imageId', i) ?? '').trim();
 	const binaryPropertyName = this.getNodeParameter('binaryPropertyName', i) as string;
 	const imageOptions = this.getNodeParameter('imageOptions', i, {}) as IDataObject;
 
 	if (!imageId) {
 		throw new NodeOperationError(this.getNode(), 'Image ID must not be empty', { itemIndex: i });
+	}
+	// The ID becomes a URL path segment and part of the file name. "." and ".." would be
+	// resolved as relative segments and reach a different endpoint.
+	if (!/^[\w.-]+$/.test(imageId) || /^\.+$/.test(imageId)) {
+		throw new NodeOperationError(this.getNode(), `Invalid Image ID "${imageId}"`, {
+			itemIndex: i,
+			description:
+				'An image ID may only contain letters, digits, "-", "_" and ".". Use the "_id" of an entry in a product\'s "media.images".',
+		});
 	}
 
 	const qs: IDataObject = {};
@@ -110,9 +127,16 @@ export async function getImage(this: IExecuteFunctions, i: number): Promise<INod
 }
 
 export async function getStock(this: IExecuteFunctions, i: number): Promise<INodeExecutionData[]> {
-	const gtin = String(this.getNodeParameter('stockGtin', i)).trim();
+	const gtin = String(this.getNodeParameter('stockGtin', i) ?? '').trim();
 	if (!gtin) {
 		throw new NodeOperationError(this.getNode(), 'GTIN must not be empty', { itemIndex: i });
+	}
+	// The GTIN becomes a URL path segment, so nothing but digits may reach the URL
+	if (!/^\d+$/.test(gtin)) {
+		throw new NodeOperationError(this.getNode(), `Invalid GTIN "${gtin}"`, {
+			itemIndex: i,
+			description: 'A GTIN consists of digits only.',
+		});
 	}
 
 	const stock = (await fashionCloudApiRequest.call(
