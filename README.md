@@ -1,18 +1,20 @@
 # n8n-nodes-fashioncloud
 
-An n8n community node for the [Fashion Cloud API](https://api.fashion.cloud).
+An n8n community node for the [Fashion Cloud API v2](https://api.fashion.cloud).
 
 ## Resources & Operations
 
 | Resource | Operation | Description |
 |----------|-----------|-------------|
-| **Brand** | Get Many | List all brands, with optional `offset`, `limit`, and `gln` filters |
-| **Product** | Get Many | List products with rich filtering: brand, GTIN, article number, season, language, date range, and more |
-| **Image** | Get | Retrieve media images for a product by ID, with optional resize (`px`), watermark, and size filters |
+| **Brand** | Get Many | List brands, optionally filtered by GLN. Supports *Return All* (offset pagination). |
+| **Product** | Get Many | List products. A brand, GTIN or article number is required (GTIN and article number cannot be combined). Options: season, season year, language, updated since, preliminary images, products without images. Supports *Return All* (cursor pagination via `nextId`). |
+| **Product** | Get Image | Download a product image (JPEG) as binary data by its image `_id` (from `media.images` of a product). Options: size (200/512/1024 px), minimum acceptable size, watermark. |
+
+List operations output one n8n item per brand/product (the API's `data` array is unwrapped).
 
 ## Credentials
 
-This node uses **API Token** authentication. Obtain your token from the Fashion Cloud portal and add it as a **Fashion Cloud API** credential in n8n.
+This node uses **API Token** authentication. Obtain your token from the Fashion Cloud platform — your account has to be enabled for API access by Fashion Cloud — and add it as a **Fashion Cloud API** credential in n8n. The token is sent as the `token` query parameter, as required by the API. Use **Test** in the credential dialog to verify it.
 
 ## Installation
 
@@ -28,22 +30,42 @@ npm install n8n-nodes-fashioncloud
 
 ## Development
 
+Requires **Node.js 24+** (tested with 24 and 26). The project uses n8n's official [`@n8n/node-cli`](https://www.npmjs.com/package/@n8n/node-cli) (`n8n-node`).
+
 ```bash
 npm install
-npm run build   # compile TypeScript → dist/
-npm run dev     # watch mode
+npm run dev        # starts n8n (via npx) on http://localhost:5678 with this node loaded, rebuilds on change
+npm run build      # compile to dist/ and copy icons/codex files
+npm run lint       # n8n community-node lint rules (strict mode, n8n Cloud eligible)
+npm run lint:fix
 ```
 
-To test locally, symlink the package into your n8n custom nodes folder:
+### Developing against n8n in Docker
+
+`docker-compose.dev.yml` runs a separate, throwaway n8n (latest image) on http://localhost:5679 with this project mounted as a custom node:
+
 ```bash
-cd ~/.n8n/custom
-npm link /path/to/n8n-nodes-fashioncloud
+docker compose -f docker-compose.dev.yml up -d
+npm run dev:docker   # compiles to dist/ on change; n8n reloads the node (N8N_DEV_RELOAD)
+docker compose -f docker-compose.dev.yml down -v   # remove it again, including its data
 ```
+
+To try the node in another n8n container, mount the project the same way: `<project>:/home/node/.n8n/custom/node_modules/n8n-nodes-fashioncloud:ro`.
+
+## Releasing
+
+Community nodes must be published from GitHub Actions with npm provenance.
+
+1. On npmjs.com, add this repository as a **Trusted Publisher** for the package (workflow `publish.yml`), or set an `NPM_TOKEN` repository secret.
+2. Run `npm run release` locally. It bumps the version, updates `CHANGELOG.md`, commits, tags and pushes.
+3. The tag push triggers `.github/workflows/publish.yml`, which lints, builds and publishes with provenance.
+
+`npm publish` from a local machine is blocked on purpose (`prepublishOnly`).
 
 ## Notes
 
-- The `includeProductsWithoutImages` param preserves the upstream API's typo (`ncludeProductsWithoutImages`) for compatibility.
-- All optional fields are omitted from the request when left blank — the API ignores absent optional params.
+- For e-commerce use, request images with **Watermark** turned off. Images without watermark require the `ecommerce` or `digitalWindow` permission for the brand.
+- API errors are surfaced with the Fashion Cloud error type, message and per-field details.
 
 ## License
 

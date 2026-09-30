@@ -1,0 +1,18 @@
+{
+	"node": "n8n-nodes-fashioncloud",
+	"nodeVersion": "1.0",
+	"codexVersion": "1.0",
+	"categories": ["Sales"],
+	"resources": {
+		"credentialDocumentation": [
+			{
+				"url": "https://bitbucket.org/bastiansass/n8n-node-fashion-cloud#credentials"
+			}
+		],
+		"primaryDocumentation": [
+			{
+				"url": "https://bitbucket.org/bastiansass/n8n-node-fashion-cloud"
+			}
+		]
+	}
+}

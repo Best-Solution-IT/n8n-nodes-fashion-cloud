@@ -1,0 +1,24 @@
+# Throwaway n8n for developing this node, separate from any other n8n instance.
+#
+#   docker compose -f docker-compose.dev.yml up -d
+#   npm run dev:docker        # compiles to dist/ on every change
+#
+# Open http://localhost:5679. n8n reloads the node when dist/ changes (N8N_DEV_RELOAD).
+# If file events don't reach the container, reload manually:
+#   curl -X POST -b <session cookie> http://localhost:5679/rest/dev/reload
+services:
+  n8n:
+    image: docker.n8n.io/n8nio/n8n:latest
+    pull_policy: always
+    ports:
+      - '5679:5678'
+    environment:
+      N8N_DEV_RELOAD: 'true'
+      N8N_DIAGNOSTICS_ENABLED: 'false'
+    volumes:
+      - n8n-dev-data:/home/node/.n8n
+      # n8n loads packages from ~/.n8n/custom/node_modules
+      - ./:/home/node/.n8n/custom/node_modules/n8n-nodes-fashioncloud:ro
+
+volumes:
+  n8n-dev-data:

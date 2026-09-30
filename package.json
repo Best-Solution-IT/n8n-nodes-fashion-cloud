@@ -1,7 +1,9 @@
 {
   "name": "n8n-nodes-fashioncloud",
   "version": "0.1.0",
-  "description": "n8n community node for the Fashion Cloud API (brands, products, images)",
+  "description": "n8n community node for the Fashion Cloud API v2 (brands, products, product images)",
+  "license": "MIT",
+  "homepage": "https://bitbucket.org/bastiansass/n8n-node-fashion-cloud",
   "keywords": [
     "n8n-community-node-package",
     "fashion",
@@ -9,30 +11,30 @@
     "ecommerce",
     "products"
   ],
-  "license": "MIT",
-  "homepage": "https://github.com/your-org/n8n-nodes-fashioncloud",
   "author": {
-    "name": "Your Name",
-    "email": "you@example.com"
+    "name": "Bastian Saß",
+    "email": "npm@bestsolutionit.com"
   },
   "repository": {
     "type": "git",
-    "url": "https://github.com/your-org/n8n-nodes-fashioncloud.git"
+    "url": "https://bitbucket.org/bastiansass/n8n-node-fashion-cloud.git"
   },
-  "main": "index.js",
   "scripts": {
-    "build": "tsc && node scripts/copy-icons.js",
-    "dev": "tsc --watch",
-    "format": "prettier nodes credentials --write",
-    "lint": "eslint nodes credentials package.json",
-    "lintfix": "eslint nodes credentials package.json --fix",
-    "prepublishOnly": "npm run build && npm run lint -c .eslintrc.prepublish.js nodes credentials"
+    "build": "n8n-node build",
+    "build:watch": "tsc --watch",
+    "dev": "n8n-node dev",
+    "dev:docker": "n8n-node dev --external-n8n",
+    "lint": "n8n-node lint",
+    "lint:fix": "n8n-node lint --fix",
+    "release": "n8n-node release",
+    "prepublishOnly": "n8n-node prerelease"
   },
   "files": [
     "dist"
   ],
   "n8n": {
     "n8nNodesApiVersion": 1,
+    "strict": true,
     "credentials": [
       "dist/credentials/FashionCloudApi.credentials.js"
     ],
@@ -41,15 +43,13 @@
     ]
   },
   "devDependencies": {
-    "@types/node": "^18.16.16",
-    "eslint-plugin-n8n-nodes-base": "^1.16.0",
-    "n8n-workflow": "^1.73.0",
-    "typescript": "^5.1.6"
+    "@n8n/node-cli": "^0.50.3",
+    "eslint": "9.32.0",
+    "prettier": "3.6.2",
+    "release-it": "^21.1.0",
+    "typescript": "5.9.2"
   },
   "peerDependencies": {
     "n8n-workflow": "*"
-  },
-  "overrides": {
-    "form-data": "^4.0.4"
   }
 }
