@@ -104,6 +104,54 @@ describe('fashionCloudApiRequest', () => {
 	});
 });
 
+describe('Base URL from the credential', () => {
+	const request = async (credentials: Record<string, unknown>) => {
+		const { context, calls } = createExecuteContext({
+			params: {},
+			api: () => ({}),
+			credentials: { token: 't', ...credentials },
+		});
+		await fashionCloudApiRequest.call(context, 'GET', '/v2/brands');
+		return calls[0];
+	};
+
+	it('sends requests to a custom Base URL, e.g. a mock server', async () => {
+		expect(await request({ baseUrl: 'http://host.docker.internal:4010' })).toMatchObject({
+			baseURL: 'http://host.docker.internal:4010',
+			url: '/v2/brands',
+		});
+	});
+
+	it('strips trailing slashes and whitespace', async () => {
+		expect((await request({ baseUrl: ' http://localhost:4010// ' })).baseURL).toBe(
+			'http://localhost:4010',
+		);
+	});
+
+	it.each([[undefined], [''], ['  ']])(
+		'uses the Fashion Cloud API when the Base URL is %j (credentials saved before the field existed)',
+		async (baseUrl) => {
+			expect((await request({ baseUrl })).baseURL).toBe(BASE_URL);
+		},
+	);
+
+	it.each([['api.fashion.cloud'], ['ftp://example.com'], ['http://']])(
+		'rejects %j without sending the token anywhere',
+		async (baseUrl) => {
+			const { context, calls } = createExecuteContext({
+				params: {},
+				api: () => ({}),
+				credentials: { token: 't', baseUrl },
+			});
+
+			await expect(fashionCloudApiRequest.call(context, 'GET', '/v2/brands')).rejects.toThrow(
+				"The credential's Base URL must start with http:// or https://",
+			);
+			expect(calls).toHaveLength(0);
+		},
+	);
+});
+
 describe('fashionCloudApiRequestAllItems', () => {
 	const pagesOf = (total: number) => (qs: Record<string, unknown>) => {
 		const offset = Number(qs.offset ?? 0);

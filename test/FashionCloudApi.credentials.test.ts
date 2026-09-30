@@ -21,9 +21,18 @@ describe('FashionCloudApi credential', () => {
 		});
 	});
 
-	it('tests the credential with a cheap brands request', () => {
+	it('has a Base URL field defaulting to the Fashion Cloud API', () => {
+		const baseUrl = credential.properties.find((property) => property.name === 'baseUrl');
+		expect(baseUrl).toMatchObject({
+			type: 'string',
+			required: true,
+			default: 'https://api.fashion.cloud',
+		});
+	});
+
+	it('tests the credential with a cheap brands request against the Base URL', () => {
 		expect(credential.test.request).toEqual({
-			baseURL: 'https://api.fashion.cloud',
+			baseURL: '={{$credentials.baseUrl || "https://api.fashion.cloud"}}',
 			url: '/v2/brands',
 			qs: { limit: 1 },
 		});

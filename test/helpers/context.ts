@@ -25,9 +25,18 @@ export type ApiHandler = (call: ApiCall) => unknown;
 
 type Params = IDataObject | ((itemIndex: number) => IDataObject);
 
+/** Decrypted values of the Fashion Cloud credential */
+export type Credentials = IDataObject;
+
+const defaultCredentials: Credentials = {
+	token: 'test-token',
+	baseUrl: 'https://api.fashion.cloud',
+};
+
 interface ContextOptions {
 	params: Params;
 	api: ApiHandler;
+	credentials?: Credentials;
 	items?: INodeExecutionData[];
 	continueOnFail?: boolean;
 	timezone?: string;
@@ -87,6 +96,7 @@ export function createExecuteContext(options: ContextOptions) {
 		getInputData: () => items,
 		getNode: () => node,
 		getTimezone: () => options.timezone ?? 'Europe/Berlin',
+		getCredentials: async () => options.credentials ?? defaultCredentials,
 		continueOnFail: () => options.continueOnFail ?? false,
 		getNodeParameter(name: string, itemIndex: number, fallback?: unknown) {
 			const params = paramsFor(itemIndex);
@@ -113,10 +123,14 @@ export function createExecuteContext(options: ContextOptions) {
 	return { context: context as unknown as IExecuteFunctions, calls };
 }
 
-export function createLoadOptionsContext(api: ApiHandler) {
+export function createLoadOptionsContext(
+	api: ApiHandler,
+	credentials: Credentials = defaultCredentials,
+) {
 	const calls: ApiCall[] = [];
 	const context = {
 		getNode: () => node,
+		getCredentials: async () => credentials,
 		helpers: recordingHelpers(api, calls),
 	};
 	return { context: context as unknown as ILoadOptionsFunctions, calls };

@@ -10,6 +10,7 @@ import {
 	NodeOperationError,
 } from 'n8n-workflow';
 
+/** Default for the credential's "Base URL" field */
 export const BASE_URL = 'https://api.fashion.cloud';
 
 /** Maximum page sizes allowed by the API */
@@ -88,6 +89,25 @@ function describeErrorBody(body: IDataObject): string {
 	return parts.join('\n');
 }
 
+/**
+ * Base URL from the credential. Credentials saved before the field existed have
+ * no value and use the Fashion Cloud API.
+ */
+export async function getBaseUrl(this: FashionCloudContext): Promise<string> {
+	const credentials = await this.getCredentials('fashionCloudApi');
+	const baseUrl =
+		String(credentials.baseUrl ?? '')
+			.trim()
+			.replace(/\/+$/, '') || BASE_URL;
+	if (!/^https?:\/\/[^/]/i.test(baseUrl)) {
+		throw new NodeOperationError(
+			this.getNode(),
+			`The credential's Base URL must start with http:// or https:// (got "${baseUrl}")`,
+		);
+	}
+	return baseUrl;
+}
+
 export async function fashionCloudApiRequest(
 	this: FashionCloudContext,
 	method: IHttpRequestMethods,
@@ -98,7 +118,7 @@ export async function fashionCloudApiRequest(
 ): Promise<unknown> {
 	const requestOptions: IHttpRequestOptions = {
 		method,
-		baseURL: BASE_URL,
+		baseURL: await getBaseUrl.call(this),
 		url: endpoint,
 		qs,
 		json: true,

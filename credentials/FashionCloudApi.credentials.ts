@@ -26,6 +26,15 @@ export class FashionCloudApi implements ICredentialType {
 			description:
 				'Your Fashion Cloud API token. Your account must be enabled for API access by Fashion Cloud.',
 		},
+		{
+			displayName: 'Base URL',
+			name: 'baseUrl',
+			type: 'string',
+			default: 'https://api.fashion.cloud',
+			required: true,
+			description:
+				'Only change this to test against a mock or staging server, e.g. http://host.docker.internal:4010 when n8n runs in Docker. Without "/v2"; the token is sent to this server.',
+		},
 	];
 
 	// The API expects the token as a query parameter on every request
@@ -40,7 +49,7 @@ export class FashionCloudApi implements ICredentialType {
 
 	test: ICredentialTestRequest = {
 		request: {
-			baseURL: 'https://api.fashion.cloud',
+			baseURL: '={{$credentials.baseUrl || "https://api.fashion.cloud"}}',
 			url: '/v2/brands',
 			qs: { limit: 1 },
 		},

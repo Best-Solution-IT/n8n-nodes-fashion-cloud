@@ -26,6 +26,13 @@ List operations output one n8n item per entry (the API's `data` array is unwrapp
 
 This node uses **API Token** authentication. Obtain your token from the Fashion Cloud platform — your account has to be enabled for API access by Fashion Cloud — and add it as a **Fashion Cloud API** credential in n8n. The token is sent as the `token` query parameter, as required by the API. Use **Test** in the credential dialog to verify it.
 
+**Base URL** defaults to `https://api.fashion.cloud`. Change it only to test against a mock or staging server, for example with a second credential named "Fashion Cloud (Mock)":
+
+- Enter the server root without `/v2`; the node appends paths like `/v2/brands`.
+- If n8n runs in Docker and the mock on your machine, use `http://host.docker.internal:<port>`, since `localhost` is the container itself.
+- The mock receives the token as the `token` query parameter, so give the mock credential a dummy token rather than your real one.
+- Credentials created before this field existed keep using the Fashion Cloud API.
+
 ## Installation
 
 ### Via n8n Community Nodes (recommended)
