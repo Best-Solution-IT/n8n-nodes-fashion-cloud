@@ -1,5 +1,5 @@
 {
-	"node": "n8n-nodes-fashioncloud",
+	"node": "n8n-nodes-fashion-cloud",
 	"nodeVersion": "1.0",
 	"codexVersion": "1.0",
 	"categories": ["Sales"],

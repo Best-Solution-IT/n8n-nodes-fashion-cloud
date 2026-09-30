@@ -1,4 +1,4 @@
-# n8n-nodes-fashioncloud
+# n8n-nodes-fashion-cloud
 
 An n8n community node for the [Fashion Cloud API v2](https://api.fashion.cloud).
 
@@ -37,12 +37,12 @@ This node uses **API Token** authentication. Obtain your token from the Fashion 
 
 ### Via n8n Community Nodes (recommended)
 1. Go to **Settings → Community Nodes** in your n8n instance.
-2. Search for `n8n-nodes-fashioncloud` and install.
+2. Search for `n8n-nodes-fashion-cloud` and install.
 
 ### Manual
 ```bash
 # In your n8n custom nodes directory
-npm install n8n-nodes-fashioncloud
+npm install n8n-nodes-fashion-cloud
 ```
 
 ## Development
@@ -77,7 +77,7 @@ npm run dev:docker   # compiles to dist/ on change; n8n reloads the node (N8N_DE
 docker compose -f docker-compose.dev.yml down -v   # remove it again, including its data
 ```
 
-To try the node in another n8n container, mount the project the same way: `<project>:/home/node/.n8n/custom/node_modules/n8n-nodes-fashioncloud:ro`.
+To try the node in another n8n container, mount the project the same way: `<project>:/home/node/.n8n/custom/node_modules/n8n-nodes-fashion-cloud:ro`.
 
 ## Releasing
 

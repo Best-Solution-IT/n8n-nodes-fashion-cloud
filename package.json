@@ -1,5 +1,5 @@
 {
-  "name": "n8n-nodes-fashioncloud",
+  "name": "n8n-nodes-fashion-cloud",
   "version": "0.1.0",
   "description": "n8n community node for the Fashion Cloud API v2 (brands, products, images, stock, prices, orders)",
   "license": "MIT",
@@ -8,6 +8,7 @@
     "n8n-community-node-package",
     "fashion",
     "fashioncloud",
+    "fashion-cloud",
     "ecommerce",
     "products"
   ],
