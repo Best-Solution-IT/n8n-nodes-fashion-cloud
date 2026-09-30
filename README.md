@@ -22,6 +22,14 @@ List operations output one n8n item per entry (the API's `data` array is unwrapp
 - Keep **Retry On Fail** off for order nodes: creating an order isn't idempotent, so a retry can place it twice.
 - Validation errors (`ValidationError`) and stock problems (`OrderingProcessError`, with ordered/available quantity per GTIN) are shown in the error description.
 
+### Custom API calls
+
+For requests the node doesn't offer, use n8n's **HTTP Request** node. Selecting "Custom API Call" in the Fashion Cloud node points you there too.
+
+1. Set **Authentication** to *Predefined Credential Type* and choose **Fashion Cloud API**.
+2. Enter the **full URL**, e.g. `https://api.fashion.cloud/v2/brands`. The credential's Base URL is not applied here, so relative paths don't work.
+3. The token is added as the `token` query parameter automatically.
+
 ## Credentials
 
 This node uses **API Token** authentication. Obtain your token from the Fashion Cloud platform — your account has to be enabled for API access by Fashion Cloud — and add it as a **Fashion Cloud API** credential in n8n. The token is sent as the `token` query parameter, as required by the API. Use **Test** in the credential dialog to verify it.

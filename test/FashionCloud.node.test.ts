@@ -1,5 +1,5 @@
 import type { INodeProperties } from 'n8n-workflow';
-import { NodeApiError } from 'n8n-workflow';
+import { NodeApiError, NodeOperationError } from 'n8n-workflow';
 import { describe, expect, it } from 'vitest';
 
 import { handlers } from '../nodes/FashionCloud/actions';
@@ -101,6 +101,20 @@ describe('execute', () => {
 
 		expect(error).toBeInstanceOf(NodeApiError);
 		expect((error as NodeApiError).httpCode).toBe('400');
+	});
+
+	it('explains how to make a custom API call when "Custom API Call" is selected', async () => {
+		// n8n hides the operation field for this option, so it must not be read
+		const { error, calls } = await runNodeExpectingError({
+			params: { resource: '__CUSTOM_API_CALL__' },
+			api,
+		});
+
+		expect(error).toBeInstanceOf(NodeOperationError);
+		expect(error.message).toBe('Custom API calls are made with the HTTP Request node');
+		expect(error.description).toContain('"Predefined Credential Type"');
+		expect(error.description).toContain('"Fashion Cloud API"');
+		expect(calls).toHaveLength(0);
 	});
 
 	it('rejects unknown operations', async () => {

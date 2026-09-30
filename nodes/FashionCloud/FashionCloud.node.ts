@@ -18,6 +18,9 @@ import { priceFields, priceOperations } from './descriptions/PriceDescription';
 import { productFields, productOperations } from './descriptions/ProductDescription';
 import { fashionCloudApiRequestAllItems, PAGE_SIZE } from './GenericFunctions';
 
+// Value n8n uses for the "Custom API Call" option it adds to every resource
+const CUSTOM_API_CALL = '__CUSTOM_API_CALL__';
+
 export class FashionCloud implements INodeType {
 	description: INodeTypeDescription = {
 		displayName: 'Fashion Cloud',
@@ -91,6 +94,18 @@ export class FashionCloud implements INodeType {
 		for (let i = 0; i < items.length; i++) {
 			try {
 				const resource = this.getNodeParameter('resource', i) as string;
+				// n8n offers "Custom API Call" but leaves it to the HTTP Request node
+				if (resource === CUSTOM_API_CALL) {
+					throw new NodeOperationError(
+						this.getNode(),
+						'Custom API calls are made with the HTTP Request node',
+						{
+							itemIndex: i,
+							description:
+								'Add an HTTP Request node, set Authentication to "Predefined Credential Type" and choose "Fashion Cloud API". Enter the full URL, e.g. https://api.fashion.cloud/v2/brands; the token is added automatically.',
+						},
+					);
+				}
 				const operation = this.getNodeParameter('operation', i) as string;
 
 				const handler = handlers[resource]?.[operation];

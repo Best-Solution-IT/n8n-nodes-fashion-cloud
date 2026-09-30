@@ -90,7 +90,7 @@ Return All / Limit with offset pagination (200 per page), items unwrapped, optio
   - Requires Node.js 24+ locally (tested with 24 and 26).
 - GitHub Actions workflows: `ci.yml` runs lint, tests with coverage and the build on every pull request; `publish.yml` runs the tests and publishes to npm with provenance, as n8n requires since May 2026.
 - Placeholder metadata replaced. `index.ts` and the copy script removed (the CLI copies icons). `.gitignore` cleaned up.
-- **Tests:** 81 tests in `test/` (Vitest). Coverage is ~99% of lines and ~92% of branches, with thresholds so it can't silently drop (commit `6a2af46`).
+- **Tests:** 82 tests in `test/` (Vitest). Coverage is ~99% of lines and ~92% of branches, with thresholds so it can't silently drop (commit `6a2af46`).
 - Package renamed to `n8n-nodes-fashion-cloud`, the usual style for two-word brands (commit `5998969`).
 
 ## 3. Missing functionality — ✅ implemented (commit `5f3f3ab`)
@@ -121,10 +121,11 @@ Return All / Limit with offset pagination (200 per page), items unwrapped, optio
 
 ## 5. Verification
 
-- **Automated:** 81 Vitest tests against an in-memory fake API that follows the spec (limits, pagination, required filters, documented error bodies). Every request is recorded, so tests check exact requests as well as output. Four planted bugs were each caught.
+- **Automated:** 82 Vitest tests against an in-memory fake API that follows the spec (limits, pagination, required filters, documented error bodies). Every request is recorded, so tests check exact requests as well as output. Four planted bugs were each caught.
 - **Real n8n (2.41.4, latest Docker image):** node, AI tool variant, credential and icons load, both as a mounted folder and as an installed `npm pack` tarball.
 - **Real API with a dummy token:** workflows for Brand → Get Many, Price → Get Many, Product → Get Stock and Order → Create (test order), plus the brand dropdown and the credential test, reach `api.fashion.cloud` and report `InvalidApiKeyError` correctly. Product → Get Many and Get Image were covered only by the automated tests.
 - **Mock server via Base URL:** credential test and workflows use the mock; credentials without a Base URL still go to the real API.
+- **Custom API Call (mock server):** n8n implements it through the HTTP Request node with *Predefined Credential Type* → *Fashion Cloud API*. GET and POST requests reached the mock with the token added and the body intact. The credential's Base URL isn't applied there, so a full URL is required (documented in the README). Running the Fashion Cloud node itself with "Custom API Call" selected now explains this instead of failing with `Could not get parameter "operation"`.
 - **Clean-room CI run on Node 26:** `npm ci`, lint, tests and build pass.
 
 ## 6. Open points
@@ -143,7 +144,6 @@ Return All / Limit with offset pagination (200 per page), items unwrapped, optio
 - `npm audit` reports 12 findings (11 moderate, 1 high), all in the CLI's development dependencies. The production audit (`--omit=dev`) is clean. The `overrides` workaround is forbidden by the CLI's lint.
 - Automatic hot reload in Docker (`N8N_DEV_RELOAD`) is unverified on macOS; it didn't fire in the sandbox. `POST /rest/dev/reload` works as a fallback.
 - n8n's lint plugin (0.34.0) falsely reports `no-credential-reuse` when the project sits directly under `/` (e.g. `/app`). Not relevant for normal paths or CI; could be reported upstream.
-- "Custom API Call", which n8n adds to every resource, is untested.
 - AI agents: if an agent is given Order → Create with AI-filled fields, it could place orders. Test Order defaults to on; keep it on in that setup.
 - Dev n8n instances that installed the package under its old name need `npm uninstall n8n-nodes-fashioncloud` and a reinstall; workflows built with it must have the node replaced.
 
