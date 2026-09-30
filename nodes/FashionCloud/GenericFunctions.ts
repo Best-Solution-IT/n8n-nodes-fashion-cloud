@@ -145,6 +145,8 @@ export async function fashionCloudApiRequest(
 
 /**
  * Fetches pages until the API has no more data or `maxItems` items were collected.
+ * The end is reached on an empty page, when `totalElements` entries were collected,
+ * or (cursor mode) when no new `nextId` is returned.
  * Returns the unwrapped entries of the `data` array of each page.
  */
 export async function fashionCloudApiRequestAllItems(
@@ -172,13 +174,18 @@ export async function fashionCloudApiRequestAllItems(
 		const data = (Array.isArray(response?.data) ? response.data : []) as IDataObject[];
 		results.push(...data);
 
-		if (data.length === 0 || data.length < (query.limit as number)) break;
+		if (data.length === 0) break;
+
+		// A short page alone doesn't prove the end: the server may return fewer entries
+		// than requested. Only `totalElements` or the cursor decide whether to go on.
+		const isShortPage = data.length < (query.limit as number);
+		const total = response.totalElements;
 
 		if (mode === 'offset') {
 			offset += data.length;
-			const total = response.totalElements;
-			if (typeof total === 'number' && offset >= total) break;
+			if (typeof total === 'number' ? offset >= total : isShortPage) break;
 		} else {
+			if (isShortPage && typeof total === 'number' && results.length >= total) break;
 			const nextId = response.nextId;
 			if (!nextId || nextId === query.afterId) break;
 			query.afterId = nextId;

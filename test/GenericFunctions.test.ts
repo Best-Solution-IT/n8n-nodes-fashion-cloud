@@ -206,6 +206,112 @@ describe('fashionCloudApiRequestAllItems', () => {
 		]);
 	});
 
+	it('keeps following offsets when the server returns fewer entries than requested', async () => {
+		// the server caps pages at 150 entries, whatever limit is requested
+		const { context, calls } = createExecuteContext({
+			params: {},
+			api: (call) => pagesOf(400)({ ...call.qs, limit: 150 }),
+		});
+
+		const items = await fashionCloudApiRequestAllItems.call(
+			context,
+			'/v2/brands',
+			{},
+			'offset',
+			200,
+		);
+
+		expect(items.map((i) => i.n)).toEqual(Array.from({ length: 400 }, (_, n) => n));
+		expect(calls.map((c) => c.qs.offset)).toEqual([0, 150, 300]);
+	});
+
+	it('without totalElements, stops offset paging on a short page', async () => {
+		const { context, calls } = createExecuteContext({
+			params: {},
+			api: (call) => ({ data: pagesOf(250)(call.qs).data }),
+		});
+
+		const items = await fashionCloudApiRequestAllItems.call(
+			context,
+			'/v2/brands',
+			{},
+			'offset',
+			200,
+		);
+
+		expect(items).toHaveLength(250);
+		expect(calls.map((c) => c.qs.offset)).toEqual([0, 200]);
+	});
+
+	describe('cursor paging when the server returns fewer entries than requested', () => {
+		const ids = ['a', 'b', 'c', 'd', 'e'];
+		// the server caps pages at 2 entries, whatever limit is requested
+		const cappedPage = (qs: Record<string, unknown>) => {
+			const start = qs.afterId ? ids.indexOf(String(qs.afterId)) + 1 : 0;
+			const data = ids.slice(start, start + 2).map((id) => ({ id }));
+			return { nextId: data.length ? data[data.length - 1].id : undefined, data };
+		};
+
+		it('follows nextId until totalElements entries were collected', async () => {
+			const { context, calls } = createExecuteContext({
+				params: {},
+				api: ({ qs }) => ({ ...cappedPage(qs), totalElements: ids.length }),
+			});
+
+			const items = await fashionCloudApiRequestAllItems.call(
+				context,
+				'/v2/products',
+				{},
+				'cursor',
+				1000,
+			);
+
+			expect(items.map((i) => i.id)).toEqual(ids);
+			// the last page completes the total, so no extra request
+			expect(calls.map((c) => c.qs.afterId)).toEqual([undefined, 'b', 'd']);
+		});
+
+		it('without totalElements, follows nextId until a page is empty', async () => {
+			const { context, calls } = createExecuteContext({
+				params: {},
+				api: ({ qs }) => cappedPage(qs),
+			});
+
+			const items = await fashionCloudApiRequestAllItems.call(
+				context,
+				'/v2/products',
+				{},
+				'cursor',
+				1000,
+			);
+
+			expect(items.map((i) => i.id)).toEqual(ids);
+			expect(calls.map((c) => c.qs.afterId)).toEqual([undefined, 'b', 'd', 'e']);
+		});
+
+		it('still stops at the requested number of items', async () => {
+			const { context, calls } = createExecuteContext({
+				params: {},
+				api: ({ qs }) => ({ ...cappedPage(qs), totalElements: ids.length }),
+			});
+
+			const items = await fashionCloudApiRequestAllItems.call(
+				context,
+				'/v2/products',
+				{},
+				'cursor',
+				1000,
+				3,
+			);
+
+			expect(items.map((i) => i.id)).toEqual(['a', 'b', 'c']);
+			expect(calls.map((c) => [c.qs.afterId, c.qs.limit])).toEqual([
+				[undefined, 3],
+				['b', 1],
+			]);
+		});
+	});
+
 	it('follows nextId cursors and stops on an empty page', async () => {
 		const ids = ['a', 'b', 'c', 'd'];
 		const { context, calls } = createExecuteContext({
