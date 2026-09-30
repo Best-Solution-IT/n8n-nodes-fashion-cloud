@@ -15,9 +15,7 @@ export async function runNode(
 }
 
 /** Executes the node expecting it to fail; returns the error and the API calls made */
-export async function runNodeExpectingError(
-	options: RunOptions,
-): Promise<{
+export async function runNodeExpectingError(options: RunOptions): Promise<{
 	error: Error & { description?: string | null; context?: Record<string, unknown> };
 	calls: ApiCall[];
 }> {

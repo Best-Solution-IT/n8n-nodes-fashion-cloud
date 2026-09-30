@@ -2,6 +2,36 @@ import type { INodeProperties, INodePropertyOptions } from 'n8n-workflow';
 
 import { returnAllFields } from './common';
 
+/** Languages supported by the product endpoint (Fashion Cloud docs) */
+export const LANGUAGE_OPTIONS: INodePropertyOptions[] = [
+	{ name: 'Bulgarian', value: 'bg' },
+	{ name: 'Croatian', value: 'hr' },
+	{ name: 'Czech', value: 'cs' },
+	{ name: 'Danish', value: 'da' },
+	{ name: 'Dutch', value: 'nl' },
+	{ name: 'English', value: 'en' },
+	{ name: 'Estonian', value: 'et' },
+	{ name: 'Finnish', value: 'fi' },
+	{ name: 'French', value: 'fr' },
+	{ name: 'German', value: 'de' },
+	{ name: 'Greek', value: 'el' },
+	{ name: 'Hungarian', value: 'hu' },
+	{ name: 'Irish', value: 'ga' },
+	{ name: 'Italian', value: 'it' },
+	{ name: 'Latvian', value: 'lv' },
+	{ name: 'Lithuanian', value: 'lt' },
+	{ name: 'Norwegian', value: 'no' },
+	{ name: 'Polish', value: 'pl' },
+	{ name: 'Portuguese', value: 'pt' },
+	{ name: 'Romanian', value: 'ro' },
+	{ name: 'Russian', value: 'ru' },
+	{ name: 'Slovak', value: 'sk' },
+	{ name: 'Slovenian', value: 'sl' },
+	{ name: 'Spanish', value: 'es' },
+	{ name: 'Swedish', value: 'sv' },
+	{ name: 'Turkish', value: 'tr' },
+];
+
 const IMAGE_SIZE_OPTIONS: INodePropertyOptions[] = [
 	{ name: '200 Px', value: '200' },
 	{ name: '512 Px', value: '512' },
@@ -124,11 +154,10 @@ const getAllFields: INodeProperties[] = [
 			{
 				displayName: 'Language',
 				name: 'lang',
-				type: 'string',
+				type: 'options',
+				options: LANGUAGE_OPTIONS,
 				default: 'de',
-				placeholder: 'de',
-				description:
-					'Language of the localised fields. Defaults to "de" on the API side. See the <a href="https://www.notion.so/fashioncloud/Product-endpoint-3fad597ecaef498ba2e37dcc2cebf37f">Fashion Cloud docs</a> for possible values.',
+				description: 'Language of the localised product fields. The API uses German if not set.',
 			},
 			{
 				displayName: 'Season',

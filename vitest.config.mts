@@ -14,7 +14,8 @@ export default defineConfig({
 		coverage: {
 			provider: 'v8',
 			include: ['nodes/**/*.ts', 'credentials/**/*.ts'],
-			reporter: ['text', 'html'],
+			// Text only: an HTML report would add .js files that `n8n-node lint` then checks
+			reporter: ['text'],
 			// Slightly below the current values, so coverage can't silently drop
 			thresholds: { lines: 95, statements: 95, functions: 100, branches: 85 },
 		},

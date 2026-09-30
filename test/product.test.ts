@@ -1,6 +1,8 @@
 import { NodeApiError, NodeOperationError } from 'n8n-workflow';
 import { describe, expect, it } from 'vitest';
 
+import { LANGUAGE_OPTIONS } from '../nodes/FashionCloud/descriptions/ProductDescription';
+import { FashionCloud } from '../nodes/FashionCloud/FashionCloud.node';
 import { createFakeApi, makeProducts } from './helpers/fakeApi';
 import { runNode, runNodeExpectingError } from './helpers/run';
 
@@ -108,6 +110,20 @@ describe('Product → Get Many', () => {
 			updatedSince: '2026-03-01T11:00:00.000Z',
 			limit: 1,
 		});
+	});
+
+	it('offers exactly the languages documented by Fashion Cloud, defaulting to German', () => {
+		// prettier-ignore
+		const documented = ['en', 'de', 'ru', 'fr', 'nl', 'it', 'da', 'bg', 'et', 'fi', 'el', 'ga', 'hr', 'lv', 'lt', 'no', 'pl', 'pt', 'ro', 'sv', 'sk', 'sl', 'es', 'cs', 'hu', 'tr'];
+		const options = new FashionCloud().description.properties.find((p) => p.name === 'options');
+		const lang = options?.options?.find((option) => option.name === 'lang') as {
+			default: string;
+			options: typeof LANGUAGE_OPTIONS;
+		};
+
+		expect(lang.options).toBe(LANGUAGE_OPTIONS);
+		expect(LANGUAGE_OPTIONS.map((option) => option.value).sort()).toEqual([...documented].sort());
+		expect(lang.default).toBe('de');
 	});
 
 	it('rejects an invalid Updated Since date', async () => {
