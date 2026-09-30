@@ -103,6 +103,38 @@ describe('execute', () => {
 		expect((error as NodeApiError).httpCode).toBe('400');
 	});
 
+	it('tells which item an API error belongs to', async () => {
+		const { error, calls } = await runNodeExpectingError({
+			params: (i) => ({
+				resource: 'product',
+				operation: 'getStock',
+				stockGtin: i === 1 ? '999' : '1',
+			}),
+			items: [{ json: {} }, { json: {} }, { json: {} }],
+			api,
+		});
+
+		expect(error).toBeInstanceOf(NodeApiError);
+		expect(error.context?.itemIndex).toBe(1);
+		// the item after the failing one is not processed
+		expect(calls).toHaveLength(2);
+	});
+
+	it('tells which item an input error belongs to', async () => {
+		const { error } = await runNodeExpectingError({
+			params: (i) => ({
+				resource: 'product',
+				operation: 'getStock',
+				stockGtin: i === 1 ? '..' : '1',
+			}),
+			items: [{ json: {} }, { json: {} }],
+			api,
+		});
+
+		expect(error).toBeInstanceOf(NodeOperationError);
+		expect(error.context?.itemIndex).toBe(1);
+	});
+
 	it('explains how to make a custom API call when "Custom API Call" is selected', async () => {
 		// n8n hides the operation field for this option, so it must not be read
 		const { error, calls } = await runNodeExpectingError({

@@ -129,9 +129,11 @@ export class FashionCloud implements INodeType {
 					});
 					continue;
 				}
-				// Both constructors return the given instance unchanged if it already has their type
+				// Re-wrapping a NodeApiError returns it unchanged and ignores the options,
+				// so the item index has to be set on the error itself
 				if (error instanceof NodeApiError) {
-					throw new NodeApiError(this.getNode(), error as unknown as JsonObject, { itemIndex: i });
+					error.context.itemIndex = i;
+					throw new NodeApiError(this.getNode(), error as unknown as JsonObject);
 				}
 				throw new NodeOperationError(this.getNode(), error as Error, { itemIndex: i });
 			}
