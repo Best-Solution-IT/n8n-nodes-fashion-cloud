@@ -26,6 +26,9 @@
     "dev:docker": "n8n-node dev --external-n8n",
     "lint": "n8n-node lint",
     "lint:fix": "n8n-node lint --fix",
+    "test": "tsc -p tsconfig.test.json && vitest run",
+    "test:watch": "vitest",
+    "test:coverage": "vitest run --coverage",
     "release": "n8n-node release",
     "prepublishOnly": "n8n-node prerelease"
   },
@@ -44,10 +47,12 @@
   },
   "devDependencies": {
     "@n8n/node-cli": "^0.50.3",
+    "@vitest/coverage-v8": "^5.0.2",
     "eslint": "9.32.0",
     "prettier": "3.6.2",
     "release-it": "^21.1.0",
-    "typescript": "5.9.2"
+    "typescript": "5.9.2",
+    "vitest": "^5.0.2"
   },
   "peerDependencies": {
     "n8n-workflow": "*"

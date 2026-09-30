@@ -50,6 +50,16 @@ npm run lint       # n8n community-node lint rules (strict mode, n8n Cloud eligi
 npm run lint:fix
 ```
 
+### Tests
+
+```bash
+npm test               # type-check + run the Vitest suite
+npm run test:watch     # re-run on change
+npm run test:coverage  # with coverage report (coverage/index.html)
+```
+
+The tests in `test/` run the node against an in-memory fake of the Fashion Cloud API (`test/helpers/fakeApi.ts`) that follows the OpenAPI spec in `docs/`: page size limits, offset/cursor pagination, required filters and the documented error bodies. Every API call the node makes is recorded, so tests check the exact requests as well as the output. CI runs them on every pull request and before publishing.
+
 ### Developing against n8n in Docker
 
 `docker-compose.dev.yml` runs a separate, throwaway n8n (latest image) on http://localhost:5679 with this project mounted as a custom node:

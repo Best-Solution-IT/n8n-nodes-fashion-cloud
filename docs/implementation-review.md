@@ -6,7 +6,7 @@ against `docs/fashion-cloud-api-v2.json` (OpenAPI 3.0.3, 6 operations).
 > **Status (2026-09-30):** Section 1 has been fixed. Brand and Product now use `getAll`, and the image
 > download moved to *Product → Get Image*. Shared request, pagination and error handling live in
 > `nodes/FashionCloud/GenericFunctions.ts`. Credential test, lint/prettier setup and package metadata are done.
-> Section 2 is implemented too: Price → Get Many, Product → Get Stock, Order → Create. Still open: automated tests in the repo (1.8).
+> Section 2 is implemented too: Price → Get Many, Product → Get Stock, Order → Create. Automated tests (1.8) are in `test/` (Vitest, 71 tests, ~99% line coverage).
 >
 > **Tooling:** migrated to `@n8n/node-cli` (strict mode, default lint config, GitHub Actions publish with
 > npm provenance). This requires Node 24+.

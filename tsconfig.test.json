@@ -1,0 +1,9 @@
+{
+	"extends": "./tsconfig.json",
+	"compilerOptions": {
+		"noEmit": true,
+		"incremental": false,
+		"lib": ["es2022"]
+	},
+	"include": ["credentials/**/*", "nodes/**/*", "test/**/*"]
+}

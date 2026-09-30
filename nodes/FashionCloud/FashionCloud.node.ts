@@ -11,22 +11,12 @@ import {
 	NodeOperationError,
 } from 'n8n-workflow';
 
-import * as brand from './actions/brand';
-import * as order from './actions/order';
-import * as price from './actions/price';
-import * as product from './actions/product';
+import { handlers } from './actions';
 import { brandFields, brandOperations } from './descriptions/BrandDescription';
 import { orderFields, orderOperations } from './descriptions/OrderDescription';
 import { priceFields, priceOperations } from './descriptions/PriceDescription';
 import { productFields, productOperations } from './descriptions/ProductDescription';
-import { fashionCloudApiRequestAllItems, OperationHandler, PAGE_SIZE } from './GenericFunctions';
-
-const handlers: Record<string, Record<string, OperationHandler>> = {
-	brand: { getAll: brand.getAll },
-	order: { create: order.create },
-	price: { getAll: price.getAll },
-	product: { getAll: product.getAll, getImage: product.getImage, getStock: product.getStock },
-};
+import { fashionCloudApiRequestAllItems, PAGE_SIZE } from './GenericFunctions';
 
 export class FashionCloud implements INodeType {
 	description: INodeTypeDescription = {
