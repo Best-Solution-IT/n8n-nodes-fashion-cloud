@@ -10,6 +10,8 @@ import {
 	NodeOperationError,
 } from 'n8n-workflow';
 
+import { isUnencryptedPublicUrl } from '../../credentials/FashionCloudApi.credentials';
+
 /** Default for the credential's "Base URL" field */
 export const BASE_URL = 'https://api.fashion.cloud';
 
@@ -99,11 +101,31 @@ export async function getBaseUrl(this: FashionCloudContext): Promise<string> {
 		String(credentials.baseUrl ?? '')
 			.trim()
 			.replace(/\/+$/, '') || BASE_URL;
-	if (!/^https?:\/\/[^/]/i.test(baseUrl)) {
+
+	// The errors don't repeat the value: it could be a token pasted into the wrong field
+	let url: URL | undefined;
+	try {
+		url = new URL(baseUrl);
+	} catch {
+		// reported below
+	}
+	if (!url || !/^https?:$/.test(url.protocol)) {
 		throw new NodeOperationError(
 			this.getNode(),
-			`The credential's Base URL must start with http:// or https:// (got "${baseUrl}")`,
+			"The credential's Base URL must start with http:// or https://",
 		);
+	}
+	if (url.username || url.password || /[?#]/.test(baseUrl)) {
+		throw new NodeOperationError(
+			this.getNode(),
+			"The credential's Base URL must not contain a user name, password, query or fragment",
+		);
+	}
+	if (isUnencryptedPublicUrl(baseUrl)) {
+		throw new NodeOperationError(this.getNode(), "The credential's Base URL must use https://", {
+			description:
+				'The token is part of every request URL. http:// is only accepted for local mock servers, e.g. localhost, host.docker.internal or a private IP address.',
+		});
 	}
 	return baseUrl;
 }

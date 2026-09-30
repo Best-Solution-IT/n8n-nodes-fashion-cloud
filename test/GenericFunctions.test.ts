@@ -159,21 +159,65 @@ describe('Base URL from the credential', () => {
 		},
 	);
 
-	it.each([['api.fashion.cloud'], ['ftp://example.com'], ['http://']])(
+	const requestError = async (baseUrl: string) => {
+		const { context, calls } = createExecuteContext({
+			params: {},
+			api: () => ({}),
+			credentials: { token: 't', baseUrl },
+		});
+		const error = (await fashionCloudApiRequest
+			.call(context, 'GET', '/v2/brands')
+			.catch((e: unknown) => e)) as Error & { description?: string };
+		return { error, calls };
+	};
+
+	it.each([['api.fashion.cloud'], ['ftp://example.com'], ['http://'], ['secret-token-value']])(
 		'rejects %j without sending the token anywhere',
 		async (baseUrl) => {
-			const { context, calls } = createExecuteContext({
-				params: {},
-				api: () => ({}),
-				credentials: { token: 't', baseUrl },
-			});
+			const { error, calls } = await requestError(baseUrl);
 
-			await expect(fashionCloudApiRequest.call(context, 'GET', '/v2/brands')).rejects.toThrow(
-				"The credential's Base URL must start with http:// or https://",
-			);
+			expect(error.message).toBe("The credential's Base URL must start with http:// or https://");
 			expect(calls).toHaveLength(0);
 		},
 	);
+
+	it('does not repeat the entered value in the error (it could be a misplaced token)', async () => {
+		const { error } = await requestError('secret-token-value');
+
+		expect(`${error.message} ${error.description ?? ''}`).not.toContain('secret-token-value');
+	});
+
+	it.each([
+		['https://user:pass@api.fashion.cloud'],
+		['https://api.fashion.cloud?token=abc'],
+		['https://api.fashion.cloud/#v2'],
+	])('rejects %j: user name, password, query and fragment are not allowed', async (baseUrl) => {
+		const { error, calls } = await requestError(baseUrl);
+
+		expect(error.message).toBe(
+			"The credential's Base URL must not contain a user name, password, query or fragment",
+		);
+		expect(calls).toHaveLength(0);
+	});
+
+	it.each([['http://api.fashion.cloud'], ['http://staging.example.com:8080/api']])(
+		'rejects %j: the token would travel unencrypted',
+		async (baseUrl) => {
+			const { error, calls } = await requestError(baseUrl);
+
+			expect(error.message).toBe("The credential's Base URL must use https://");
+			expect(error.description).toContain('http:// is only accepted for local mock servers');
+			expect(calls).toHaveLength(0);
+		},
+	);
+
+	it.each([
+		['http://192.168.1.20:4010'],
+		['http://mock:4010'],
+		['https://staging.example.com/api'],
+	])('accepts %j', async (baseUrl) => {
+		expect((await request({ baseUrl })).baseURL).toBe(baseUrl);
+	});
 });
 
 describe('fashionCloudApiRequestAllItems', () => {
