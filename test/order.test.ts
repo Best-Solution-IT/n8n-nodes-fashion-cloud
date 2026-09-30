@@ -109,6 +109,32 @@ describe('Order → Create (fields)', () => {
 		expect((calls[0].body as IDataObject).isTest).toBe(false);
 	});
 
+	it.each([
+		['true', true],
+		[' False ', false],
+	])('accepts Test Order given as the text %j', async (isTest, expected) => {
+		const { output, calls } = await runNode({ params: withFields({ isTest }), api });
+
+		expect((calls[0].body as IDataObject).isTest).toBe(expected);
+		expect(output[0].json.isTest).toBe(expected);
+	});
+
+	// e.g. an expression like {{ $json.isTest }} where the field is missing
+	it.each([[undefined], [null], [''], ['yes'], [0], [1]])(
+		'rejects Test Order = %j instead of placing a real order',
+		async (isTest) => {
+			const { error, calls } = await runNodeExpectingError({
+				params: withFields({ isTest }),
+				api,
+			});
+
+			expect(error).toBeInstanceOf(NodeOperationError);
+			expect(error.message).toBe('"Test Order" must be true or false');
+			expect(error.description).toContain('no order was sent');
+			expect(calls).toHaveLength(0);
+		},
+	);
+
 	it('accepts products as a JSON array and normalises GTIN and quantity', async () => {
 		const { calls } = await runNode({
 			params: withFields({
@@ -229,6 +255,17 @@ describe('Order → Create (JSON)', () => {
 		});
 
 		expect((calls[0].body as IDataObject).isTest).toBe(true);
+	});
+
+	it('does not drop isTest from the JSON when the Test Order toggle resolves to nothing', async () => {
+		const { error, calls } = await runNodeExpectingError({
+			params: { ...jsonOrder, isTest: undefined, orderJson: { ...body, isTest: true } },
+			api,
+		});
+
+		expect(error.message).toBe('"Test Order" must be true or false');
+		expect(error.description).toContain('It resolved to an empty value');
+		expect(calls).toHaveLength(0);
 	});
 
 	it('rejects JSON that is not an object', async () => {

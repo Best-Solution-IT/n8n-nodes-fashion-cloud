@@ -19,6 +19,27 @@ function compact(values: IDataObject | undefined): IDataObject {
 	return result;
 }
 
+/**
+ * Reads "Test Order". Only an explicit true/false is accepted: an expression that
+ * resolves to nothing must not turn a test order into a real one.
+ */
+function getIsTest(this: IExecuteFunctions, itemIndex: number): boolean {
+	const value: unknown = this.getNodeParameter('isTest', itemIndex, null);
+	if (typeof value === 'boolean') return value;
+	if (typeof value === 'string') {
+		const text = value.trim().toLowerCase();
+		if (text === 'true') return true;
+		if (text === 'false') return false;
+	}
+
+	const got =
+		value === undefined || value === null || value === '' ? 'an empty value' : `"${String(value)}"`;
+	throw new NodeOperationError(this.getNode(), '"Test Order" must be true or false', {
+		itemIndex,
+		description: `It resolved to ${got}, so no order was sent. If the value comes from an expression, make sure it returns a boolean.`,
+	});
+}
+
 function normaliseProducts(
 	this: IExecuteFunctions,
 	products: unknown,
@@ -122,7 +143,7 @@ function buildOrderFromFields(this: IExecuteFunctions, i: number): IDataObject {
 }
 
 export async function create(this: IExecuteFunctions, i: number): Promise<INodeExecutionData[]> {
-	const isTest = this.getNodeParameter('isTest', i) as boolean;
+	const isTest = getIsTest.call(this, i);
 	const specifyOrder = this.getNodeParameter('specifyOrder', i) as string;
 
 	let order: IDataObject;
