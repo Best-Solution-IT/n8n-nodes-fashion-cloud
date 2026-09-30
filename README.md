@@ -18,6 +18,7 @@ List operations output one n8n item per entry (the API's `data` array is unwrapp
 ### Orders
 
 - **Test Order** is on by default. Test orders are validated by Fashion Cloud but not placed. The toggle also overrides `isTest` in a JSON body.
+- If **Test Order** is set by an expression, it must resolve to `true` or `false`. Anything else, such as an empty value, stops the node before an order is sent.
 - Orders are sent as `type: "endless-aisle"` with `clientType: "erp"`, as the API requires for external clients.
 - Keep **Retry On Fail** off for order nodes: creating an order isn't idempotent, so a retry can place it twice.
 - Validation errors (`ValidationError`) and stock problems (`OrderingProcessError`, with ordered/available quantity per GTIN) are shown in the error description.
@@ -39,7 +40,10 @@ This node uses **API Token** authentication. Obtain your token from the Fashion 
 - Enter the server root without `/v2`; the node appends paths like `/v2/brands`.
 - If n8n runs in Docker and the mock on your machine, use `http://host.docker.internal:<port>`, since `localhost` is the container itself.
 - The mock receives the token as the `token` query parameter, so give the mock credential a dummy token rather than your real one.
+- `http://` is only accepted for local servers: `localhost`, `host.docker.internal`, private IP addresses and single-word host names such as Docker service names. Everything else needs `https://`, because the token is part of the URL. This also applies when the credential is used in the HTTP Request node.
 - Credentials created before this field existed keep using the Fashion Cloud API.
+
+If you share the credential with other users, consider setting its **Allowed HTTP Request Domains** to `api.fashion.cloud`. It can then no longer be used to send the token to other hosts through the HTTP Request node.
 
 ## Installation
 

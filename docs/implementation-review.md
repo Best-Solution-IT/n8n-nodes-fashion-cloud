@@ -46,7 +46,7 @@ Authentication matched the spec from the start: the token is sent as the `token`
 ### 2.2 List responses not unwrapped, no pagination (high) — ✅ resolved
 - Every list operation outputs one item per entry of `data`.
 - Return All / Limit on all list operations: offset pagination for brands (200 per page), `nextId` cursor for products (1000 per page) and prices (200 per page).
-- Pagination stops at `totalElements`, on a short or empty page, or when a cursor repeats. It requests only as many entries as are still needed.
+- Pagination stops once `totalElements` entries were collected, on an empty page, or when no new cursor is returned. A short page alone doesn't end it (see 2.9). It requests only as many entries as are still needed.
 
 ### 2.3 Product → Get Many filters and descriptions (high) — ✅ resolved
 | Finding | Resolution |
@@ -75,7 +75,7 @@ Return All / Limit with offset pagination (200 per page), items unwrapped, optio
 ### 2.6 Credential (medium) — ✅ resolved
 - Credential test: `GET /v2/brands?limit=1`.
 - `documentationUrl` points to Fashion Cloud's API documentation.
-- **Base URL** field, defaulting to `https://api.fashion.cloud`, used by all requests and the credential test, e.g. to test against a mock server (commit `b6ecc10`). Credentials saved before the field existed keep using the Fashion Cloud API. Non-http(s) values are rejected before the token is sent anywhere.
+- **Base URL** field, defaulting to `https://api.fashion.cloud`, used by all requests and the credential test, e.g. to test against a mock server (commit `b6ecc10`). Credentials saved before the field existed keep using the Fashion Cloud API. Invalid values are rejected before the token is sent anywhere: anything that isn't an http(s) URL, URLs with a user name, password, query or fragment, and `http://` for hosts that aren't local (see 2.9).
 
 ### 2.7 n8n conventions (low) — ✅ resolved
 - Singular resources (`brand`, `order`, `price`, `product`) and the standard `getAll` / "Get Many" naming.
@@ -90,8 +90,25 @@ Return All / Limit with offset pagination (200 per page), items unwrapped, optio
   - Requires Node.js 24+ locally (tested with 24 and 26).
 - GitHub Actions workflows: `ci.yml` runs lint, tests with coverage and the build on every pull request; `publish.yml` runs the tests and publishes to npm with provenance, as n8n requires since May 2026.
 - Placeholder metadata replaced. `index.ts` and the copy script removed (the CLI copies icons). `.gitignore` cleaned up.
-- **Tests:** 82 tests in `test/` (Vitest). Coverage is ~99% of lines and ~92% of branches, with thresholds so it can't silently drop (commit `6a2af46`).
+- **Tests:** 175 tests in `test/` (Vitest). Coverage is ~99% of lines and ~94% of branches, with thresholds so it can't silently drop (commit `6a2af46`).
 - Package renamed to `n8n-nodes-fashion-cloud`, the usual style for two-word brands (commit `5998969`).
+
+### 2.9 Security review (2026-09-30) — ✅ resolved
+A later review ran the node in n8n 2.41.4 against a mock API. Each finding was reproduced there first and checked again after the fix.
+
+| Finding | Resolution |
+|---|---|
+| **Test Order failed open (high).** An expression that resolved to nothing dropped `isTest` from the body, also from a JSON body that contained `"isTest": true`, so a real order was placed. | Only `true` / `false` (also as text) are accepted. Anything else raises an error before any request. |
+| **Product filter silently dropped.** With Product Filter set to GTIN or Article Number and an empty value, the request listed the whole brand. | The value is trimmed; an empty one is rejected before any request. |
+| **Pagination could truncate.** A page shorter than the requested limit ended paging even though more data existed. | A short page ends paging only when `totalElements` confirms everything was collected. Otherwise `nextId` (or the offset) is followed until it runs out. Whether the real API returns short pages is still unverified. |
+| **`..` as GTIN or Image ID reached another endpoint** (`/v2/stock`, `/v2/products/media/`), because dots aren't URL-encoded. | Get Stock accepts digits only. Image IDs may contain letters, digits, `-`, `_` and `.`, but not only dots. The ID is also used in the file name. |
+| **API errors didn't say which item failed.** Re-wrapping a `NodeApiError` ignores `itemIndex`. | The index is set on the error itself. |
+| **"Updated Since" was off by an hour around clock changes**, e.g. Europe/Berlin `2024-10-27T01:30` became `00:30Z` instead of `23:30Z` the day before. | Both offsets around a clock change are tried. A time that occurs twice or not at all resolves to the earlier instant, so no updates are skipped. `Date` objects are accepted. |
+| **The token could travel unencrypted.** The Base URL accepted `http://` for any host. | `http://` is only accepted for local hosts (loopback, `host.docker.internal`, private IP addresses, single-label names). The credential's `authenticate` is now a function that enforces this for the node, the credential test and the HTTP Request node alike. |
+| **Base URL errors repeated the entered value**, which could be a token pasted into the wrong field. URLs with a user name, password, query or fragment were accepted. | The value is no longer repeated; such URLs are rejected. |
+| **Release and dev setup.** Actions pinned to tags; dev n8n published on all interfaces; `dist/tsconfig.tsbuildinfo` shipped in the package (233 of 341 kB). | Actions are pinned to commit SHAs (v4.4.0 of `checkout` and `setup-node`); the dev port binds to `127.0.0.1`; the build cache is excluded via `files` in `package.json`. |
+
+Checked and found in order: the token doesn't appear in execution error data (401, 500, 502, connection refused, DNS failure) or in Continue On Fail output.
 
 ## 3. Missing functionality — ✅ implemented (commit `5f3f3ab`)
 
@@ -121,7 +138,7 @@ Return All / Limit with offset pagination (200 per page), items unwrapped, optio
 
 ## 5. Verification
 
-- **Automated:** 82 Vitest tests against an in-memory fake API that follows the spec (limits, pagination, required filters, documented error bodies). Every request is recorded, so tests check exact requests as well as output. Four planted bugs were each caught.
+- **Automated:** 175 Vitest tests against an in-memory fake API that follows the spec (limits, pagination, required filters, documented error bodies). Every request is recorded, so tests check exact requests as well as output. Four planted bugs were each caught.
 - **Real n8n (2.41.4, latest Docker image):** node, AI tool variant, credential and icons load, both as a mounted folder and as an installed `npm pack` tarball.
 - **Real API with a dummy token:** workflows for Brand → Get Many, Price → Get Many, Product → Get Stock and Order → Create (test order), plus the brand dropdown and the credential test, reach `api.fashion.cloud` and report `InvalidApiKeyError` correctly. Product → Get Many and Get Image were covered only by the automated tests.
 - **Mock server via Base URL:** credential test and workflows use the mock; credentials without a Base URL still go to the real API.
@@ -141,6 +158,7 @@ Return All / Limit with offset pagination (200 per page), items unwrapped, optio
    - Successful responses in general: so far only error responses from the real API have been seen.
 
 ### Known limitations (not blocking)
+- The pinned GitHub Actions don't update themselves. Once the repo is on GitHub, Dependabot (`package-ecosystem: github-actions`) can keep the SHAs current.
 - `npm audit` reports 12 findings (11 moderate, 1 high), all in the CLI's development dependencies. The production audit (`--omit=dev`) is clean. The `overrides` workaround is forbidden by the CLI's lint.
 - Automatic hot reload in Docker (`N8N_DEV_RELOAD`) is unverified on macOS; it didn't fire in the sandbox. `POST /rest/dev/reload` works as a fallback.
 - n8n's lint plugin (0.34.0) falsely reports `no-credential-reuse` when the project sits directly under `/` (e.g. `/app`). Not relevant for normal paths or CI; could be reported upstream.
