@@ -3,7 +3,7 @@
   "version": "0.1.0",
   "description": "n8n community node for the Fashion Cloud API v2 (brands, products, images, stock, prices, orders)",
   "license": "MIT",
-  "homepage": "https://bitbucket.org/bastiansass/n8n-node-fashion-cloud",
+  "homepage": "https://github.com/Best-Solution-IT/n8n-nodes-fashion-cloud",
   "keywords": [
     "n8n-community-node-package",
     "fashion",
@@ -18,7 +18,7 @@
   },
   "repository": {
     "type": "git",
-    "url": "https://bitbucket.org/bastiansass/n8n-node-fashion-cloud.git"
+    "url": "https://github.com/Best-Solution-IT/n8n-nodes-fashion-cloud.git"
   },
   "scripts": {
     "build": "n8n-node build",

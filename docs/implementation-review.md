@@ -148,7 +148,7 @@ Checked and found in order: the token doesn't appear in execution error data (40
 ## 6. Open points
 
 ### Before the first release
-1. **Move the repo to GitHub** as `n8n-nodes-fashion-cloud`, then update the four Bitbucket URLs: `homepage` and `repository.url` in `package.json`, and both links in `nodes/FashionCloud/FashionCloud.node.json`. npm's provenance check rejects the publish if `repository.url` doesn't match.
+1. **Make the GitHub repo public.** The repo moved to [Best-Solution-IT/n8n-nodes-fashion-cloud](https://github.com/Best-Solution-IT/n8n-nodes-fashion-cloud) on 2026-09-30, and `package.json` and the codex file point there. It is still private: npm only publishes with provenance from public repositories, and the documentation links in the node lead to it.
 2. **Set up npm publishing**: Trusted Publisher on npmjs.com (workflow `publish.yml`), or an `NPM_TOKEN` repository secret. A brand-new package may need its first release via token. The name `n8n-nodes-fashion-cloud` was still free on npm on 2026-09-30.
 3. **Check with a real token** (e.g. in the dev container):
    - Price → Get Many with several GTINs. The spec doesn't define the format; the node sends them comma-separated.

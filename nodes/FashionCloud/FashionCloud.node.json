@@ -6,12 +6,12 @@
 	"resources": {
 		"credentialDocumentation": [
 			{
-				"url": "https://bitbucket.org/bastiansass/n8n-node-fashion-cloud#credentials"
+				"url": "https://github.com/Best-Solution-IT/n8n-nodes-fashion-cloud#credentials"
 			}
 		],
 		"primaryDocumentation": [
 			{
-				"url": "https://bitbucket.org/bastiansass/n8n-node-fashion-cloud"
+				"url": "https://github.com/Best-Solution-IT/n8n-nodes-fashion-cloud"
 			}
 		]
 	}
