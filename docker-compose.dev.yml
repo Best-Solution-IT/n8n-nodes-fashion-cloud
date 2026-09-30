@@ -11,7 +11,8 @@ services:
     image: docker.n8n.io/n8nio/n8n:latest
     pull_policy: always
     ports:
-      - '5679:5678'
+      # Loopback only, so the dev instance isn't reachable from the network
+      - '127.0.0.1:5679:5678'
     environment:
       N8N_DEV_RELOAD: 'true'
       N8N_DIAGNOSTICS_ENABLED: 'false'
