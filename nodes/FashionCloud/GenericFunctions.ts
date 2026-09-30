@@ -4,11 +4,25 @@ import {
 	IHttpRequestMethods,
 	IHttpRequestOptions,
 	ILoadOptionsFunctions,
+	INodeExecutionData,
 	JsonObject,
 	NodeApiError,
+	NodeOperationError,
 } from 'n8n-workflow';
 
 export const BASE_URL = 'https://api.fashion.cloud';
+
+/** Maximum page sizes allowed by the API */
+export const PAGE_SIZE = {
+	brands: 200,
+	products: 1000,
+	prices: 200,
+};
+
+export type OperationHandler = (
+	this: IExecuteFunctions,
+	itemIndex: number,
+) => Promise<INodeExecutionData[]>;
 
 type FashionCloudContext = IExecuteFunctions | ILoadOptionsFunctions;
 
@@ -197,4 +211,46 @@ export function toIsoDate(value: unknown, timeZone = 'UTC'): string | undefined 
 	if (isNaN(wallClockAsUtc)) return undefined;
 	const instant = wallClockAsUtc - timezoneOffsetMs(wallClockAsUtc, timeZone);
 	return new Date(instant).toISOString();
+}
+
+/** Reads an "Updated Since" style parameter and converts it to ISO 8601, or throws. */
+export function getIsoDateParameter(
+	this: IExecuteFunctions,
+	value: unknown,
+	label: string,
+	itemIndex: number,
+): string | undefined {
+	if (value === undefined || value === null || value === '') return undefined;
+	const iso = toIsoDate(value, this.getTimezone());
+	if (!iso) {
+		throw new NodeOperationError(this.getNode(), `Invalid "${label}" date: ${value}`, {
+			itemIndex,
+		});
+	}
+	return iso;
+}
+
+/** Reads a JSON parameter that may arrive as a string or as an already parsed value. */
+export function parseJsonParameter(
+	this: IExecuteFunctions,
+	value: unknown,
+	label: string,
+	itemIndex: number,
+): unknown {
+	if (typeof value !== 'string') return value;
+	try {
+		return JSON.parse(value);
+	} catch {
+		throw new NodeOperationError(this.getNode(), `"${label}" is not valid JSON`, { itemIndex });
+	}
+}
+
+export function toExecutionData(
+	this: IExecuteFunctions,
+	entries: IDataObject | IDataObject[],
+	itemIndex: number,
+): INodeExecutionData[] {
+	return this.helpers.constructExecutionMetaData(this.helpers.returnJsonArray(entries), {
+		itemData: { item: itemIndex },
+	});
 }

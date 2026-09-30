@@ -1,7 +1,7 @@
 {
   "name": "n8n-nodes-fashioncloud",
   "version": "0.1.0",
-  "description": "n8n community node for the Fashion Cloud API v2 (brands, products, product images)",
+  "description": "n8n community node for the Fashion Cloud API v2 (brands, products, images, stock, prices, orders)",
   "license": "MIT",
   "homepage": "https://bitbucket.org/bastiansass/n8n-node-fashion-cloud",
   "keywords": [

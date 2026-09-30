@@ -9,8 +9,18 @@ An n8n community node for the [Fashion Cloud API v2](https://api.fashion.cloud).
 | **Brand** | Get Many | List brands, optionally filtered by GLN. Supports *Return All* (offset pagination). |
 | **Product** | Get Many | List products. A brand, GTIN or article number is required (GTIN and article number cannot be combined). Options: season, season year, language, updated since, preliminary images, products without images. Supports *Return All* (cursor pagination via `nextId`). |
 | **Product** | Get Image | Download a product image (JPEG) as binary data by its image `_id` (from `media.images` of a product). Options: size (200/512/1024 px), minimum acceptable size, watermark. |
+| **Product** | Get Stock | Stock and delivery time for one GTIN at the brand (values may be capped by the brand). The GTIN is added to the output. |
+| **Price** | Get Many | Your retailer-specific prices for a brand. Options: GTINs (comma-separated), updated since. Supports *Return All* (cursor pagination via `nextId`). |
+| **Order** | Create | Place an endless aisle order, either from fields (products, shipping/billing address, debitor, end customer, dropshipping) or as a raw JSON body. Products can come from a JSON array, e.g. a previous node. |
 
-List operations output one n8n item per brand/product (the API's `data` array is unwrapped).
+List operations output one n8n item per entry (the API's `data` array is unwrapped).
+
+### Orders
+
+- **Test Order** is on by default. Test orders are validated by Fashion Cloud but not placed. The toggle also overrides `isTest` in a JSON body.
+- Orders are sent as `type: "endless-aisle"` with `clientType: "erp"`, as the API requires for external clients.
+- Keep **Retry On Fail** off for order nodes: creating an order isn't idempotent, so a retry can place it twice.
+- Validation errors (`ValidationError`) and stock problems (`OrderingProcessError`, with ordered/available quantity per GTIN) are shown in the error description.
 
 ## Credentials
 
