@@ -89,7 +89,34 @@ npm run dev:docker   # compiles to dist/ on change; n8n reloads the node (N8N_DE
 docker compose -f docker-compose.dev.yml down -v   # remove it again, including its data
 ```
 
-To try the node in another n8n container, mount the project the same way: `<project>:/home/node/.n8n/custom/node_modules/n8n-nodes-fashion-cloud:ro`.
+To use the mounted project in another n8n container instead, add this volume, set `N8N_DEV_RELOAD=true` on the container and run `npm run dev:docker`:
+
+```
+<project>:/home/node/.n8n/custom/node_modules/n8n-nodes-fashion-cloud:ro
+```
+
+A mounted project is registered as `CUSTOM.fashionCloud`, not under its package name. Workflows built with it won't use the published package later; the node has to be replaced in them. That's why `docker-compose.dev.yml` uses a throwaway n8n. For an instance whose workflows you want to keep, install a local build instead (next section).
+
+To test against a mock API, create a second credential with the mock's address as **Base URL** (see [Credentials](#credentials)).
+
+### Installing a local build in an existing n8n container
+
+This installs the package the same way n8n does when it comes from npm, without publishing it:
+
+```bash
+npm run build
+npm pack        # creates n8n-nodes-fashion-cloud-<version>.tgz
+docker cp n8n-nodes-fashion-cloud-<version>.tgz <container>:/tmp/
+docker exec -u node <container> sh -c 'mkdir -p /home/node/.n8n/nodes && cd /home/node/.n8n/nodes && npm install --omit=dev --legacy-peer-deps --ignore-scripts /tmp/n8n-nodes-fashion-cloud-<version>.tgz'
+docker restart <container>
+```
+
+- The node gets its real type, `n8n-nodes-fashion-cloud.fashionCloud`, so workflows keep working after switching to the published package.
+- Keep `--legacy-peer-deps`: without it npm installs a second copy of `n8n-workflow` and its dependencies next to the one n8n already provides.
+- The install survives image updates as long as `/home/node/.n8n` is on a volume.
+- The package doesn't appear under **Settings → Community Nodes**, because it wasn't installed through the UI. To update it, repeat the steps.
+- To remove it, run `npm uninstall n8n-nodes-fashion-cloud` in `/home/node/.n8n/nodes` and restart the container. Do this before installing the published version.
+- An instance that still has the package under its old name needs `npm uninstall n8n-nodes-fashioncloud` first. Workflows built with the old package must have the node replaced, because the node type changed with the name.
 
 ## Releasing
 
