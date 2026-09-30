@@ -1,143 +1,160 @@
-# Fashion Cloud node vs. API v2 spec — review
+# Fashion Cloud node vs. API v2 spec — review and status
 
-Compared `nodes/FashionCloud/FashionCloud.node.ts` and `credentials/FashionCloudApi.credentials.ts`
-against `docs/fashion-cloud-api-v2.json` (OpenAPI 3.0.3, 6 operations).
+**Status as of 2026-09-30 (commit `5998969`):** every endpoint in the spec is implemented, and every finding
+from the original review has been resolved. What remains is release setup (GitHub move, npm publishing)
+and checks that need a real API token. See [Open points](#6-open-points).
 
-> **Status (2026-09-30):** Section 1 has been fixed. Brand and Product now use `getAll`, and the image
-> download moved to *Product → Get Image*. Shared request, pagination and error handling live in
-> `nodes/FashionCloud/GenericFunctions.ts`. Credential test, lint/prettier setup and package metadata are done.
-> Section 2 is implemented too: Price → Get Many, Product → Get Stock, Order → Create. Automated tests (1.8) are in `test/` (Vitest, 71 tests, ~99% line coverage).
->
-> **Tooling:** migrated to `@n8n/node-cli` (strict mode, default lint config, GitHub Actions publish with
-> npm provenance). This requires Node 24+.
+The original review compared the node at commit `33db456` (2026-03-25) with
+[`fashion-cloud-api-v2.json`](fashion-cloud-api-v2.json) (OpenAPI 3.0.3, 6 operations). The findings below
+keep their original numbering so they can still be traced.
 
-## Coverage at a glance
+## 1. Coverage
 
-| Endpoint | Spec operation | Node status |
-|---|---|---|
-| `GET /v2/brands` | List Brands | Implemented, but has flaws |
-| `GET /v2/products` | List Products | Implemented, but has flaws |
-| `GET /v2/products/media/images/{id}` | Load Product Image | Implemented, **broken** |
-| `GET /v2/products/prices/` | GET Product prices | **Missing** |
-| `GET /v2/products/{gtin}/stock` | GET Product's Stock | **Missing** |
-| `POST /v2/orders` | POST Order (endless aisle) | **Missing** |
+| Endpoint | Spec operation | At review | Now |
+|---|---|---|---|
+| `GET /v2/brands` | List Brands | Implemented, with flaws | ✅ Brand → Get Many |
+| `GET /v2/products` | List Products | Implemented, with flaws | ✅ Product → Get Many |
+| `GET /v2/products/media/images/{id}` | Load Product Image | Implemented, **broken** | ✅ Product → Get Image |
+| `GET /v2/products/prices/` | GET Product prices | **Missing** | ✅ Price → Get Many |
+| `GET /v2/products/{gtin}/stock` | GET Product's Stock | **Missing** | ✅ Product → Get Stock |
+| `POST /v2/orders` | POST Order (endless aisle) | **Missing** | ✅ Order → Create |
 
-Auth matches the spec: the token goes in the `token` query parameter, which the credential's `authenticate.qs` handles correctly.
+Authentication matched the spec from the start: the token is sent as the `token` query parameter.
 
----
+### Code layout
 
-## 1. Needs fixing (existing implementation)
-
-### 1.1 Image → Get is broken (critical)
-The spec says the endpoint **always returns binary `image/jpeg`**. The node:
-- sends `json: true` and pushes the response into `json` (`FashionCloud.node.ts:316-333`). The result is garbled data or a parse error instead of an image.
-- **Fix:** request with `encoding: 'arraybuffer'` and `returnFullResponse: true`, then write the result with `this.helpers.prepareBinaryData(...)` to a configurable binary property (default `data`), with a `.jpg` file name and the `image/jpeg` MIME type.
-
-Wrong parameter semantics:
-| Param | Node | Spec |
-|---|---|---|
-| `id` (path) | "Product ID" (`:97-103`) | **Image `_id`**, i.e. `media.images[]._id` from a product, not the product ID |
-| `px` | free number, "Max Width" | enum `200`, `512`, `1024`. If omitted, you get the original size |
-| `watermark` | **string**, "Watermark text to apply" (`:252-256`) | **boolean**, with or without the FC watermark. E-commerce use *must* send `watermark=false` |
-| `minAcceptableSize` | number, "size in **bytes**" (`:259-263`) | enum `200`, `512`, `1024` (**pixels**). Fallback size, only works together with `px` |
-
-Also, the `px` and `minAcceptableSize` fields use `type: 'number'` with `default: ''`, which is a type mismatch. Make them `options` fields.
-
-### 1.2 List responses are not unwrapped, and there is no pagination (high)
-Every list endpoint returns an envelope: `{ offset|afterId, nextId, limit, totalElements, data: [...] }`.
-The node wraps the whole envelope as **one** item (`:324`), so users get one item with a `data` array instead of one item per brand or product.
-- **Fix:** output `response.data` as separate items.
-- **Add "Return All" + "Limit"** (standard n8n pattern):
-  - Brands: offset-based pagination (page size up to 200).
-  - Products: cursor-based. Send `afterId = nextId` until there is no `nextId` or `data` is empty (page size up to 1000). The spec discourages `offset` ("not recommended anymore"). Hide it or mark it as deprecated.
-  - Prices (once added): cursor-based with `afterId`/`nextId`, page size up to 200.
-- Optionally offer a "Simplify / include metadata" toggle for users who need `totalElements`.
-
-### 1.3 Products → Get Many: filter rules and wrong descriptions (high)
-- The spec **requires at least one of `brand`, `gtin`, `articleNumber`**, and **`gtin` and `articleNumber` can't be combined**. The node makes all three optional in "Additional Fields", so the default configuration always fails with a 400.
-  **Fix:** add a top-level required "Filter By" selector (Brand / GTIN / Article Number) with its value field. Keep `brand` combinable with the other two. Validate before sending.
-- `brand` expects the brand `_id` from `/brands`. It could be a `resourceLocator`/`loadOptions` dropdown backed by `GET /v2/brands`.
-- `season` description says "e.g. SS, AW" (`:216`). The actual values are `fall_winter`, `spring_summer`, `nos`, `none`. Make it an `options` field.
-- `seasonYear` is `type: 'number'` with `default: ''` (`:219-223`). The spec type is string, and it is ignored when `season = nos`.
-- `includePreliminary` description says "include preliminary *products*" (`:209`). The spec says it controls preliminary **images** in `media.images`.
-- `includeProductsWithoutImages`: the spec default is `false`, which is fine. But the README note about the upstream typo `ncludeProductsWithoutImages` is **wrong**. The spec uses the correct name, and the note apparently came from a substring match. Remove that note.
-- `lang`: make it an `options` field. The spec default is `de`, and the link lists the possible values.
-- `limit`: the node default is 50. The spec default is 200 and the maximum is **1000**. Add `typeOptions: { minValue: 1, maxValue: 1000 }`.
-- `updatedSince`: n8n `dateTime` values can come without a timezone. Normalise them to full ISO 8601 (for example `new Date(v).toISOString()`).
-
-### 1.4 Brands → Get Many (medium)
-- `limit`: the spec default is 200 and the maximum is **200**. Add `minValue`/`maxValue`.
-- Needs Return All / pagination and `data` unwrapping (see 1.2).
-
-### 1.5 Error handling (medium)
-- In `continueOnFail`, any error that isn't a `NodeOperationError` is replaced with `'An unexpected error occurred'` (`:337-339`). That hides the useful API messages (`InvalidApiKeyError`, `ValidationError` with field list, `OrderingProcessError` with `availableQuantity`...).
-  **Fix:** wrap HTTP errors in `NodeApiError(this.getNode(), error as JsonObject)` and surface `type`, `message` and `errors[]`. With `continueOnFail`, output `error.message` plus the details.
-- 404 on images (`NotFoundError`) and 400/401 on stock should produce readable messages.
-
-### 1.6 Credential (medium)
-- Missing a credential `test` (`ICredentialTestRequest`), so users can't verify the token in the UI. Suggested test: `GET https://api.fashion.cloud/v2/brands?limit=1` (the token is added by `authenticate`).
-- `documentationUrl` should point to real docs (the Notion page linked in the spec, or the repo README).
-- Optional: move the base URL (`https://api.fashion.cloud`) into the credential, or at least into a constant. It is currently hard-coded in `execute`.
-
-### 1.7 Node description / n8n conventions (low)
-- Resource values are plural (`brands`, `products`, `images`). The n8n convention is singular camelCase (`brand`, `product`, `image`). Now (v0.1.0) is the cheap time to change it.
-- `subtitle` shows raw values such as "brands: getMany". The usual pattern is `={{$parameter["operation"] + ": " + $parameter["resource"]}}`.
-- Consider `usableAsTool: true` so the node works with the AI Agent.
-- Consider moving the image endpoint under **Product** as "Get Image", or renaming the resource to "Product Image". It is a sub-resource of products.
-- `returnData` building: calling `constructExecutionMetaData(returnJsonArray(...))` once per result object works, but it is simpler to call it once on the whole array.
-
-### 1.8 Package / tooling (low–medium, blocks publishing)
-- `npm run lint` fails. ESLint 10 is resolved transitively, no `eslint.config.*` / `.eslintrc.js` exists, and `eslint` is not a devDependency. `prepublishOnly` references `.eslintrc.prepublish.js`, which doesn't exist, so **`npm publish` will fail**. Consider migrating to `@n8n/node-cli` (`n8n-node build/lint`), which is the current community-node tooling.
-- `package.json` still has placeholder `author`, `homepage` and `repository` (`your-org`, `you@example.com`).
-- `"main": "index.js"`, but `index.ts` is outside the tsconfig `include`, so `dist/index.js` is never built. Either remove `main`/`index.ts` or include it.
-- `.DS_Store` ended up in `dist/`. It is harmless, but the copy script and build could be cleaned up. `.gitignore` lists `dist/` twice.
-- No tests.
-
----
-
-## 2. Missing functionality
-
-### 2.1 Product Price → Get Many — `GET /v2/products/prices/`
-- **Required:** `brand` (brand `_id`).
-- Optional: `gtins` (the spec doesn't define the format for several GTINs; probably comma-separated, so check), `updatedSince` (date-time), `limit` (default and max 200), `afterId`.
-- Response: `{ totalElements, data: [{ gtin, currency, purchasePrice, discountedPurchasePrice, recommendedRetailPrice, discountedRecommendedRetailPrice, updated }], afterId, limit, nextId }`. Unwrap `data` and paginate using `nextId`.
-- Note the trailing slash in the path.
-- Prices are retailer-specific. Mention this in the node description.
-
-### 2.2 Product Stock → Get — `GET /v2/products/{gtin}/stock`
-- Path param `gtin` (required). The endpoint accepts only one GTIN per call, which maps naturally to one call per input item.
-- Response: `{ stock, deliveryTime: { minimum, maximum }, created, updated }`. Values may be capped by the brand.
-- Errors: 400 `InvalidParametersError`, 401 `InvalidApiKeyError`.
-
-### 2.3 Order → Create — `POST /v2/orders` (endless aisle)
-Request body (JSON):
-- **Required:** `type` (`endless-aisle` | `b2b-order`; only `endless-aisle` is relevant externally), `products[]` (`{ gtin, quantity }`, max 1000), `shippingAddress` (`gln`, `name`, `address1`, `city`, `zip`, `country` required; `address2`, `email`, `phone` optional).
-- `clientId`: required for endless aisle.
-- `clientType`: must be `erp` for external callers.
-- `debitor`: `gln` required for endless aisle (the buyer GLN, or the shipping GLN as a fallback). Also `phone`, `name`, `email`, `employeeId`, `employeeName`.
-- Optional: `billingAddress` (same shape as shipping), `endCustomer` (`customerNumber`, `name`, `email`, `phone`), `useDropshipping` (experimental), `isTest` (boolean).
-
-UI suggestion:
-- `fixedCollection` for products (GTIN + quantity), plus a "Products (JSON)" alternative for bulk carts built by previous nodes.
-- Collections for shipping, billing, debitor and end customer.
-- `isTest` as a prominent boolean. Consider defaulting it to `true` so trying the node never places a real order.
-- Offer a "Send raw JSON body" mode as an escape hatch.
-
-Response:
-- 200: `{ _id, orderNumber, status }`.
-- 400 has two error shapes: `ValidationError` (`errors[]` with `field`/`type`/`message`) and `OrderingProcessError` (`errors[]` with `gtin`, `orderedQuantity`, `availableQuantity`). Surface both in full.
-
-Safety: this is a non-idempotent write. Document that users should **not** turn on "Retry on Fail" for this operation, since a retry could place duplicate orders.
-
----
-
-## 3. Suggested target structure
-
-| Resource | Operations |
+| Path | Contents |
 |---|---|
-| Brand | Get Many (Return All, Limit, GLN filter) |
-| Product | Get Many (required filter + options, Return All via `nextId`), Get Image (binary), Get Stock |
-| Price | Get Many (brand required, gtins, updatedSince, Return All via `nextId`) |
-| Order | Create (endless aisle; `isTest`) |
+| `nodes/FashionCloud/FashionCloud.node.ts` | Node definition, brand dropdown, dispatch to the operations |
+| `nodes/FashionCloud/descriptions/*Description.ts` | UI fields, one file per resource |
+| `nodes/FashionCloud/actions/*.ts` | Operation logic, one file per resource; `index.ts` maps resource/operation to code |
+| `nodes/FashionCloud/GenericFunctions.ts` | Requests, Base URL, error mapping, pagination, date conversion |
+| `credentials/FashionCloudApi.credentials.ts` | API token, Base URL, credential test |
+| `test/` | Vitest suite and an in-memory fake of the API |
 
-Shared helper: `fashionCloudApiRequest()` for requests and error mapping, and `fashionCloudApiRequestAllItems()` for offset and cursor pagination. These go in `GenericFunctions.ts`.
+## 2. Original findings and how they were resolved
+
+### 2.1 Image download was broken (critical) — ✅ resolved
+| Finding | Resolution |
+|---|---|
+| Binary JPEG was requested as JSON and put into `json` | Downloaded as binary (`encoding: 'arraybuffer'`) into a configurable binary field (default `data`), file name `<imageId>[_<px>].jpg`. The operation is now *Product → Get Image*. |
+| `id` was labelled "Product ID" | Now "Image ID", described as the `_id` from a product's `media.images` |
+| `px` was a free number | Dropdown: 200 / 512 / 1024 px; not set = original size |
+| `watermark` was a text field | Boolean; the description explains the e-commerce permission requirement |
+| `minAcceptableSize` was described as bytes | Dropdown: 200 / 512 / 1024 px. Rejected without `px`, before any request. |
+
+### 2.2 List responses not unwrapped, no pagination (high) — ✅ resolved
+- Every list operation outputs one item per entry of `data`.
+- Return All / Limit on all list operations: offset pagination for brands (200 per page), `nextId` cursor for products (1000 per page) and prices (200 per page).
+- Pagination stops at `totalElements`, on a short or empty page, or when a cursor repeats. It requests only as many entries as are still needed.
+
+### 2.3 Product → Get Many filters and descriptions (high) — ✅ resolved
+| Finding | Resolution |
+|---|---|
+| Brand/GTIN/article number all optional, so the default setup failed | Brand dropdown plus a "Product Filter" choice (None / GTIN / Article Number). GTIN and article number can't be combined. Missing filters are rejected before any request. |
+| Brand needed an ID from `/brands` | Dropdown loaded from `GET /v2/brands` (all pages, sorted by name); an ID can still be given by expression |
+| Wrong season values | Dropdown: Fall/Winter, Spring/Summer, NOS, No Season Assigned |
+| `seasonYear` had the wrong type | String; the description notes it's ignored for NOS |
+| `includePreliminary` described as products | Now "Include Preliminary Images" |
+| README note about an upstream typo | Removed; the note was wrong |
+| `lang` was free text | Dropdown with the 26 languages documented by Fashion Cloud, default German (commit `dc0b587`) |
+| Limit defaults/maximums | Default 50; any limit works because pagination fetches pages at the allowed size |
+| `updatedSince` without a timezone | Converted to ISO 8601 UTC; values without a timezone use the workflow timezone (DST-aware) |
+
+### 2.4 Brand → Get Many (medium) — ✅ resolved
+Return All / Limit with offset pagination (200 per page), items unwrapped, optional GLN filter.
+
+### 2.5 Error handling (medium) — ✅ resolved
+- API errors become `NodeApiError` with the HTTP status, and the Fashion Cloud `type`, `message` and every `errors[]` entry in the description. Examples:
+  - `ValidationError: … - Field should be present (field=clientId, type=isNotPresent)`
+  - `OrderingProcessError: … (orderedQuantity=1000, availableQuantity=120, gtin=…)`
+- Error bodies of binary requests (image 404) are parsed too.
+- With Continue On Fail, failing items output `{ error, description }` and the remaining items are still processed.
+- Input problems (missing filters, invalid dates, invalid order data) raise `NodeOperationError` before any request.
+
+### 2.6 Credential (medium) — ✅ resolved
+- Credential test: `GET /v2/brands?limit=1`.
+- `documentationUrl` points to Fashion Cloud's API documentation.
+- **Base URL** field, defaulting to `https://api.fashion.cloud`, used by all requests and the credential test, e.g. to test against a mock server (commit `b6ecc10`). Credentials saved before the field existed keep using the Fashion Cloud API. Non-http(s) values are rejected before the token is sent anywhere.
+
+### 2.7 n8n conventions (low) — ✅ resolved
+- Singular resources (`brand`, `order`, `price`, `product`) and the standard `getAll` / "Get Many" naming.
+- Subtitle shows operation and resource.
+- `usableAsTool: true`; n8n adds a "Fashion Cloud Tool" variant for AI agents.
+- Image download moved under Product.
+- Light and dark icons for node and credential, plus a codex file (category "Sales").
+
+### 2.8 Package and tooling (blocked publishing) — ✅ resolved
+- Migrated to n8n's official `@n8n/node-cli`: build, lint, dev mode and release (commit `9a377a1`).
+  - Strict mode with the default lint config, so the package is eligible for n8n Cloud verification.
+  - Requires Node.js 24+ locally (tested with 24 and 26).
+- GitHub Actions workflows: `ci.yml` runs lint, tests with coverage and the build on every pull request; `publish.yml` runs the tests and publishes to npm with provenance, as n8n requires since May 2026.
+- Placeholder metadata replaced. `index.ts` and the copy script removed (the CLI copies icons). `.gitignore` cleaned up.
+- **Tests:** 81 tests in `test/` (Vitest). Coverage is ~99% of lines and ~92% of branches, with thresholds so it can't silently drop (commit `6a2af46`).
+- Package renamed to `n8n-nodes-fashion-cloud`, the usual style for two-word brands (commit `5998969`).
+
+## 3. Missing functionality — ✅ implemented (commit `5f3f3ab`)
+
+| Operation | Implementation notes |
+|---|---|
+| Price → Get Many | Brand required (dropdown). Options: GTINs, Updated Since, Start After ID. Return All via `nextId` (200 per page). Uses the documented trailing slash `/v2/products/prices/`. |
+| Product → Get Stock | One GTIN per request (URL-encoded); the GTIN is added to the output because the response doesn't contain it |
+| Order → Create | See below |
+
+**Order → Create:**
+- Built from fields (client ID, debitor GLN, products, shipping address, plus optional billing address, debitor details, end customer and dropshipping) or sent as a complete JSON body.
+- Products can be defined in the UI or passed as a JSON array, e.g. from a previous node.
+- Sent with `type: "endless-aisle"` and `clientType: "erp"`, as the spec requires for external clients.
+- **Test Order is on by default.** The toggle also overrides `isTest` in a JSON body, so a copied body can't place a real order by accident.
+- A notice in the node warns against Retry On Fail, because creating an order isn't idempotent.
+- Checked before sending: required shipping fields, 1–1000 products, non-empty GTINs, whole-number quantities of at least 1, valid JSON.
+
+## 4. Decisions that differ from the original suggestions
+
+| Suggestion | Decision | Reason |
+|---|---|---|
+| Cap Limit at the API maximum | No cap | Pagination fetches pages at the allowed size, so larger limits work |
+| Keep `offset` for products (deprecated) | Replaced by "Start After ID" | The spec discourages `offset`; the cursor is the recommended way to resume |
+| "Simplify / include metadata" toggle | Not added | Nothing needed `totalElements` so far |
+| `resourceLocator` for brands | `options` dropdown with `loadOptions` | Simpler; an ID can still be given by expression |
+| Order type selectable | Fixed to `endless-aisle` | The spec describes `b2b-order` as internal to Fashion Cloud |
+
+## 5. Verification
+
+- **Automated:** 81 Vitest tests against an in-memory fake API that follows the spec (limits, pagination, required filters, documented error bodies). Every request is recorded, so tests check exact requests as well as output. Four planted bugs were each caught.
+- **Real n8n (2.41.4, latest Docker image):** node, AI tool variant, credential and icons load, both as a mounted folder and as an installed `npm pack` tarball.
+- **Real API with a dummy token:** workflows for Brand → Get Many, Price → Get Many, Product → Get Stock and Order → Create (test order), plus the brand dropdown and the credential test, reach `api.fashion.cloud` and report `InvalidApiKeyError` correctly. Product → Get Many and Get Image were covered only by the automated tests.
+- **Mock server via Base URL:** credential test and workflows use the mock; credentials without a Base URL still go to the real API.
+- **Clean-room CI run on Node 26:** `npm ci`, lint, tests and build pass.
+
+## 6. Open points
+
+### Before the first release
+1. **Move the repo to GitHub** as `n8n-nodes-fashion-cloud`, then update the four Bitbucket URLs: `homepage` and `repository.url` in `package.json`, and both links in `nodes/FashionCloud/FashionCloud.node.json`. npm's provenance check rejects the publish if `repository.url` doesn't match.
+2. **Set up npm publishing**: Trusted Publisher on npmjs.com (workflow `publish.yml`), or an `NPM_TOKEN` repository secret. A brand-new package may need its first release via token. The name `n8n-nodes-fashion-cloud` was still free on npm on 2026-09-30.
+3. **Check with a real token** (e.g. in the dev container):
+   - Price → Get Many with several GTINs. The spec doesn't define the format; the node sends them comma-separated.
+   - A test order. Confirms the request body, including the fixed `type` and `clientType`.
+   - Get Image with Watermark off (needs the `ecommerce` or `digitalWindow` permission).
+   - Product → Get Many and Get Image, which haven't been run against the real API at all.
+   - Successful responses in general: so far only error responses from the real API have been seen.
+
+### Known limitations (not blocking)
+- `npm audit` reports 12 findings (11 moderate, 1 high), all in the CLI's development dependencies. The production audit (`--omit=dev`) is clean. The `overrides` workaround is forbidden by the CLI's lint.
+- Automatic hot reload in Docker (`N8N_DEV_RELOAD`) is unverified on macOS; it didn't fire in the sandbox. `POST /rest/dev/reload` works as a fallback.
+- n8n's lint plugin (0.34.0) falsely reports `no-credential-reuse` when the project sits directly under `/` (e.g. `/app`). Not relevant for normal paths or CI; could be reported upstream.
+- "Custom API Call", which n8n adds to every resource, is untested.
+- AI agents: if an agent is given Order → Create with AI-filled fields, it could place orders. Test Order defaults to on; keep it on in that setup.
+- Dev n8n instances that installed the package under its old name need `npm uninstall n8n-nodes-fashioncloud` and a reinstall; workflows built with it must have the node replaced.
+
+## 7. History
+
+| Commit | Change |
+|---|---|
+| `33db456` | State at the original review |
+| `9a377a1` | Findings fixed, migration to `@n8n/node-cli` |
+| `5f3f3ab` | Price, Stock and Order endpoints |
+| `6a2af46` | Vitest test suite |
+| `dc0b587` | Language dropdown |
+| `b6ecc10` | Configurable Base URL |
+| `5998969` | Package renamed to `n8n-nodes-fashion-cloud` |
