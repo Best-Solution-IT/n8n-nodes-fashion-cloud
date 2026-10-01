@@ -51,7 +51,7 @@ Authentication matched the spec from the start: the token is sent as the `token`
 ### 2.3 Product → Get Many filters and descriptions (high) — ✅ resolved
 | Finding | Resolution |
 |---|---|
-| Brand/GTIN/article number all optional, so the default setup failed | Brand dropdown plus a "Product Filter" choice (None / GTIN / Article Number). GTIN and article number can't be combined. Missing filters are rejected before any request. |
+| Brand/GTIN/article number all optional, so the default setup failed | "Filter By" choice (Brand / GTIN / Article Number) that shows only the field it needs. A search by article number can be limited to a brand under Options; a GTIN is looked up without a brand. Empty values are rejected before any request. |
 | Brand needed an ID from `/brands` | Dropdown loaded from `GET /v2/brands` (all pages, sorted by name); an ID can still be given by expression |
 | Wrong season values | Dropdown: Fall/Winter, Spring/Summer, NOS, No Season Assigned |
 | `seasonYear` had the wrong type | String; the description notes it's ignored for NOS |
@@ -155,6 +155,7 @@ Checked and found in order: the token doesn't appear in execution error data (40
    - A test order. Confirms the request body, including the fixed `type` and `clientType`.
    - Get Image with Watermark off (needs the `ecommerce` or `digitalWindow` permission).
    - Product → Get Many and Get Image, which haven't been run against the real API at all.
+   - Product → Get Many by article number with the Brand option: check that the result is actually limited to that brand.
    - Successful responses in general: so far only error responses from the real API have been seen.
 
 ### Known limitations (not blocking)

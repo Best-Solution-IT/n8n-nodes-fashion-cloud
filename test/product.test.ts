@@ -1,4 +1,5 @@
-import { NodeApiError, NodeOperationError } from 'n8n-workflow';
+import type { INodeProperties } from 'n8n-workflow';
+import { NodeApiError, NodeHelpers, NodeOperationError } from 'n8n-workflow';
 import { describe, expect, it } from 'vitest';
 
 import { LANGUAGE_OPTIONS } from '../nodes/FashionCloud/descriptions/ProductDescription';
@@ -17,9 +18,42 @@ const api = createFakeApi({
 describe('Product → Get Many', () => {
 	const getAll = { resource: 'product', operation: 'getAll', options: {} };
 
+	it.each([
+		['brand', ['brand (required)'], []],
+		['gtin', ['gtin (required)'], []],
+		['articleNumber', ['articleNumber (required)'], ['brand']],
+	])('Filter By %s shows only the fields it needs', (productFilter, filterFields, brandOption) => {
+		const { description } = new FashionCloud();
+		const params = { ...getAll, productFilter, returnAll: false };
+		const shown = description.properties.filter((property) =>
+			NodeHelpers.displayParameter(params, property, null, description),
+		);
+		const options = (shown.find((property) => property.name === 'options')?.options ??
+			[]) as INodeProperties[];
+
+		expect(
+			shown.map((property) => property.name + (property.required ? ' (required)' : '')),
+		).toEqual([
+			'resource',
+			'operation',
+			'productFilter',
+			...filterFields,
+			'returnAll',
+			'limit',
+			'options',
+		]);
+		// An optional brand dropdown would show 'The value "" is not supported!' until one is picked
+		expect(
+			options
+				.filter((option) => NodeHelpers.displayParameter({}, option, null, description, params))
+				.map((option) => option.name)
+				.filter((name) => name === 'brand'),
+		).toEqual(brandOption);
+	});
+
 	it('pages through all products of a brand with the nextId cursor', async () => {
 		const { output, calls } = await runNode({
-			params: { ...getAll, returnAll: true, brand: 'brand-0001', productFilter: 'none' },
+			params: { ...getAll, returnAll: true, productFilter: 'brand', brand: 'brand-0001' },
 			api,
 		});
 
@@ -33,78 +67,63 @@ describe('Product → Get Many', () => {
 		]);
 	});
 
-	it('filters by GTIN, optionally together with a brand', async () => {
+	it('looks up a GTIN without a brand', async () => {
 		const { output, calls } = await runNode({
 			params: {
 				...getAll,
 				returnAll: false,
 				limit: 10,
-				brand: 'brand-0001',
 				productFilter: 'gtin',
 				gtin: '4000000000042',
+				// left over from another filter
+				brand: 'brand-0002',
+				options: { brand: 'brand-0002' },
 			},
 			api,
 		});
 
-		expect(calls[0].qs).toEqual({ brand: 'brand-0001', gtin: '4000000000042', limit: 10 });
+		expect(calls[0].qs).toEqual({ gtin: '4000000000042', limit: 10 });
 		expect(output.map((item) => item.json.gtin)).toEqual(['4000000000042']);
 	});
 
-	it('filters by article number without a brand', async () => {
-		const { calls } = await runNode({
-			params: {
-				...getAll,
-				returnAll: false,
-				limit: 3,
-				brand: '',
-				productFilter: 'articleNumber',
-				articleNumber: 'ART-1',
-			},
+	it('looks up an article number, optionally within one brand', async () => {
+		const articleNumber = { ...getAll, returnAll: false, limit: 3, productFilter: 'articleNumber' };
+
+		const { calls: anyBrand } = await runNode({
+			params: { ...articleNumber, articleNumber: 'ART-1', brand: 'brand-0002' },
+			api,
+		});
+		const { calls: oneBrand } = await runNode({
+			params: { ...articleNumber, articleNumber: 'ART-1', options: { brand: ' brand-0001 ' } },
 			api,
 		});
 
-		expect(calls[0].qs).toEqual({ articleNumber: 'ART-1', limit: 3 });
-	});
-
-	it('requires a brand, GTIN or article number before calling the API', async () => {
-		const { error, calls } = await runNodeExpectingError({
-			params: { ...getAll, returnAll: true, brand: '', productFilter: 'none' },
-			api,
-		});
-
-		expect(error).toBeInstanceOf(NodeOperationError);
-		expect(error.message).toBe('A brand, GTIN or article number is required to list products');
-		expect(calls).toHaveLength(0);
+		expect(anyBrand[0].qs).toEqual({ articleNumber: 'ART-1', limit: 3 });
+		expect(oneBrand[0].qs).toEqual({ articleNumber: 'ART-1', brand: 'brand-0001', limit: 3 });
 	});
 
 	// e.g. an expression like {{ $json.gtin }} where the field is missing
 	it.each([
-		['gtin', undefined, 'Product Filter is set to "GTIN", but the GTIN is empty'],
-		['gtin', '  ', 'Product Filter is set to "GTIN", but the GTIN is empty'],
-		[
-			'articleNumber',
-			'',
-			'Product Filter is set to "Article Number", but the Article Number is empty',
-		],
-	])(
-		'rejects an empty %s filter instead of listing the whole brand',
-		async (productFilter, value, message) => {
-			const { error, calls } = await runNodeExpectingError({
-				params: {
-					...getAll,
-					returnAll: true,
-					brand: 'brand-0001',
-					productFilter,
-					[productFilter]: value,
-				},
-				api,
-			});
+		['brand', '', 'Brand must not be empty'],
+		['gtin', undefined, 'GTIN must not be empty'],
+		['gtin', '  ', 'GTIN must not be empty'],
+		['articleNumber', '', 'Article Number must not be empty'],
+	])('rejects an empty %s before calling the API', async (productFilter, value, message) => {
+		const { error, calls } = await runNodeExpectingError({
+			params: {
+				...getAll,
+				returnAll: true,
+				productFilter,
+				brand: 'brand-0001',
+				[productFilter]: value,
+			},
+			api,
+		});
 
-			expect(error).toBeInstanceOf(NodeOperationError);
-			expect(error.message).toBe(message);
-			expect(calls).toHaveLength(0);
-		},
-	);
+		expect(error).toBeInstanceOf(NodeOperationError);
+		expect(error.message).toBe(message);
+		expect(calls).toHaveLength(0);
+	});
 
 	it('trims the filter value', async () => {
 		const { calls } = await runNode({
@@ -112,7 +131,6 @@ describe('Product → Get Many', () => {
 				...getAll,
 				returnAll: false,
 				limit: 1,
-				brand: '',
 				productFilter: 'gtin',
 				gtin: ' 4000000000042 ',
 			},
@@ -128,8 +146,8 @@ describe('Product → Get Many', () => {
 				...getAll,
 				returnAll: false,
 				limit: 1,
+				productFilter: 'brand',
 				brand: 'brand-0001',
-				productFilter: 'none',
 				options: {
 					afterId: 'product-00010',
 					lang: 'en',
@@ -176,8 +194,8 @@ describe('Product → Get Many', () => {
 			params: {
 				...getAll,
 				returnAll: true,
+				productFilter: 'brand',
 				brand: 'brand-0001',
-				productFilter: 'none',
 				options: { updatedSince: 'yesterday-ish' },
 			},
 			api,

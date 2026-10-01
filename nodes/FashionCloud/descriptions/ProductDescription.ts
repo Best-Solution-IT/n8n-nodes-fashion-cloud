@@ -70,42 +70,42 @@ export const productOperations: INodeProperties[] = [
 ];
 
 const getAllFields: INodeProperties[] = [
-	...returnAllFields('product'),
+	{
+		displayName: 'Filter By',
+		name: 'productFilter',
+		type: 'options',
+		options: [
+			{
+				name: 'Brand',
+				value: 'brand',
+				description: 'List all products of a brand',
+			},
+			{
+				name: 'GTIN',
+				value: 'gtin',
+				description: 'Find a product by its GTIN / EAN barcode',
+			},
+			{
+				name: 'Article Number',
+				value: 'articleNumber',
+				description: 'Find products by article number, optionally within one brand',
+			},
+		],
+		default: 'brand',
+		displayOptions: { show: { resource: ['product'], operation: ['getAll'] } },
+	},
 	{
 		displayName: 'Brand Name or ID',
 		name: 'brand',
 		type: 'options',
 		typeOptions: { loadOptionsMethod: 'getBrands' },
+		required: true,
 		default: '',
 		description:
-			'Brand to return products for. At least one of brand, GTIN or article number is required. Choose from the list, or specify an ID using an <a href="https://docs.n8n.io/code/expressions/">expression</a>.',
-		displayOptions: { show: { resource: ['product'], operation: ['getAll'] } },
-	},
-	{
-		displayName: 'Product Filter',
-		name: 'productFilter',
-		type: 'options',
-		options: [
-			{
-				name: 'None',
-				value: 'none',
-				description: 'Filter by brand only',
-			},
-			{
-				name: 'GTIN',
-				value: 'gtin',
-				description: 'Filter by GTIN / EAN barcode',
-			},
-			{
-				name: 'Article Number',
-				value: 'articleNumber',
-				description: 'Filter by article number',
-			},
-		],
-		default: 'none',
-		description:
-			'Additional product filter. GTIN and article number cannot be combined; both can be combined with a brand.',
-		displayOptions: { show: { resource: ['product'], operation: ['getAll'] } },
+			'Brand to return products for. Choose from the list, or specify an ID using an <a href="https://docs.n8n.io/code/expressions/">expression</a>.',
+		displayOptions: {
+			show: { resource: ['product'], operation: ['getAll'], productFilter: ['brand'] },
+		},
 	},
 	{
 		displayName: 'GTIN',
@@ -124,11 +124,13 @@ const getAllFields: INodeProperties[] = [
 		type: 'string',
 		required: true,
 		default: '',
-		description: 'Article number of the product',
+		description:
+			'Article number of the product. The same number can exist at several brands; to search one brand only, add the Brand option.',
 		displayOptions: {
 			show: { resource: ['product'], operation: ['getAll'], productFilter: ['articleNumber'] },
 		},
 	},
+	...returnAllFields('product'),
 	{
 		displayName: 'Options',
 		name: 'options',
@@ -137,6 +139,17 @@ const getAllFields: INodeProperties[] = [
 		default: {},
 		displayOptions: { show: { resource: ['product'], operation: ['getAll'] } },
 		options: [
+			{
+				displayName: 'Brand Name or ID',
+				name: 'brand',
+				type: 'options',
+				typeOptions: { loadOptionsMethod: 'getBrands' },
+				default: '',
+				description:
+					'Only return products of this brand. Choose from the list, or specify an ID using an <a href="https://docs.n8n.io/code/expressions/">expression</a>.',
+				// Inside a collection, a leading "/" refers to a top-level parameter
+				displayOptions: { show: { '/productFilter': ['articleNumber'] } },
+			},
 			{
 				displayName: 'Include Preliminary Images',
 				name: 'includePreliminary',

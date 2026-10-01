@@ -18,33 +18,22 @@ import {
 export async function getAll(this: IExecuteFunctions, i: number): Promise<INodeExecutionData[]> {
 	const returnAll = this.getNodeParameter('returnAll', i) as boolean;
 	const limit = returnAll ? Infinity : (this.getNodeParameter('limit', i) as number);
-	const brand = this.getNodeParameter('brand', i, '') as string;
 	const productFilter = this.getNodeParameter('productFilter', i) as string;
 	const options = this.getNodeParameter('options', i, {}) as IDataObject;
 
-	const qs: IDataObject = {};
-	if (brand) qs.brand = brand;
-	if (productFilter === 'gtin' || productFilter === 'articleNumber') {
-		// A selected filter without a value must not silently widen the request to the whole brand
-		const label = productFilter === 'gtin' ? 'GTIN' : 'Article Number';
-		const value = String(this.getNodeParameter(productFilter, i, '') ?? '').trim();
-		if (!value) {
-			throw new NodeOperationError(
-				this.getNode(),
-				`Product Filter is set to "${label}", but the ${label} is empty`,
-				{ itemIndex: i },
-			);
-		}
-		qs[productFilter] = value;
+	const filter =
+		productFilter === 'gtin' || productFilter === 'articleNumber' ? productFilter : 'brand';
+	const label = { brand: 'Brand', gtin: 'GTIN', articleNumber: 'Article Number' }[filter];
+	// e.g. an expression that resolves to nothing
+	const value = String(this.getNodeParameter(filter, i, '') ?? '').trim();
+	if (!value) {
+		throw new NodeOperationError(this.getNode(), `${label} must not be empty`, { itemIndex: i });
 	}
 
-	if (!qs.brand && !qs.gtin && !qs.articleNumber) {
-		throw new NodeOperationError(
-			this.getNode(),
-			'A brand, GTIN or article number is required to list products',
-			{ itemIndex: i },
-		);
-	}
+	const qs: IDataObject = { [filter]: value };
+	// A GTIN identifies a product across brands, an article number only within a brand
+	const brand = String(options.brand ?? '').trim();
+	if (filter === 'articleNumber' && brand) qs.brand = brand;
 
 	for (const key of [
 		'afterId',
