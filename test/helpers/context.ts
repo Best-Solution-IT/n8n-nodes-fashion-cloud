@@ -25,6 +25,11 @@ export type ApiHandler = (call: ApiCall) => unknown;
 
 type Params = IDataObject | ((itemIndex: number) => IDataObject);
 
+/** A resource locator value as n8n stores it, e.g. for the brand picker */
+export function resourceLocator(value: string, mode = 'list'): IDataObject {
+	return { __rl: true, mode, value };
+}
+
 /** Decrypted values of the Fashion Cloud credential */
 export type Credentials = IDataObject;
 
@@ -98,11 +103,30 @@ export function createExecuteContext(options: ContextOptions) {
 		getTimezone: () => options.timezone ?? 'Europe/Berlin',
 		getCredentials: async () => options.credentials ?? defaultCredentials,
 		continueOnFail: () => options.continueOnFail ?? false,
-		getNodeParameter(name: string, itemIndex: number, fallback?: unknown) {
-			const params = paramsFor(itemIndex);
-			if (name in params) return params[name];
-			if (fallback !== undefined) return fallback;
-			throw new Error(`Test did not set node parameter "${name}"`);
+		getNodeParameter(
+			name: string,
+			itemIndex: number,
+			fallback?: unknown,
+			{ extractValue = false } = {},
+		) {
+			// "options.brand" reads a field of a collection, like in n8n
+			const path = name.split('.');
+			const key = path.pop() as string;
+			const parent = path.reduce<IDataObject | undefined>(
+				(object, field) => object?.[field] as IDataObject | undefined,
+				paramsFor(itemIndex),
+			);
+			// A parameter set to undefined stands for an expression that resolved to nothing
+			if (!parent || !(key in parent)) {
+				if (fallback !== undefined) return fallback;
+				throw new Error(`Test did not set node parameter "${name}"`);
+			}
+			const value = parent[key];
+			// A resource locator value is { __rl: true, mode, value }
+			if (extractValue && typeof value === 'object' && value !== null && '__rl' in value) {
+				return (value as IDataObject).value;
+			}
+			return value;
 		},
 		helpers: {
 			...recordingHelpers(options.api, calls),

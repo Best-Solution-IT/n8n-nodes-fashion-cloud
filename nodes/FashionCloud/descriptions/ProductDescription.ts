@@ -1,6 +1,6 @@
 import type { INodeProperties, INodePropertyOptions } from 'n8n-workflow';
 
-import { returnAllFields } from './common';
+import { brandField, returnAllFields } from './common';
 
 /** Languages supported by the product endpoint (Fashion Cloud docs) */
 export const LANGUAGE_OPTIONS: INodePropertyOptions[] = [
@@ -94,19 +94,12 @@ const getAllFields: INodeProperties[] = [
 		default: 'brand',
 		displayOptions: { show: { resource: ['product'], operation: ['getAll'] } },
 	},
-	{
-		displayName: 'Brand Name or ID',
-		name: 'brand',
-		type: 'options',
-		typeOptions: { loadOptionsMethod: 'getBrands' },
+	brandField('Brand to return products for', {
 		required: true,
-		default: '',
-		description:
-			'Brand to return products for. Choose from the list, or specify an ID using an <a href="https://docs.n8n.io/code/expressions/">expression</a>.',
 		displayOptions: {
 			show: { resource: ['product'], operation: ['getAll'], productFilter: ['brand'] },
 		},
-	},
+	}),
 	{
 		displayName: 'GTIN',
 		name: 'gtin',
@@ -139,17 +132,10 @@ const getAllFields: INodeProperties[] = [
 		default: {},
 		displayOptions: { show: { resource: ['product'], operation: ['getAll'] } },
 		options: [
-			{
-				displayName: 'Brand Name or ID',
-				name: 'brand',
-				type: 'options',
-				typeOptions: { loadOptionsMethod: 'getBrands' },
-				default: '',
-				description:
-					'Only return products of this brand. Choose from the list, or specify an ID using an <a href="https://docs.n8n.io/code/expressions/">expression</a>.',
+			brandField('Only return products of this brand', {
 				// Inside a collection, a leading "/" refers to a top-level parameter
 				displayOptions: { show: { '/productFilter': ['articleNumber'] } },
-			},
+			}),
 			{
 				displayName: 'Include Preliminary Images',
 				name: 'includePreliminary',

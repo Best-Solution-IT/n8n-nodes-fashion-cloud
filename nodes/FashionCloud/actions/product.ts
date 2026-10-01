@@ -25,15 +25,19 @@ export async function getAll(this: IExecuteFunctions, i: number): Promise<INodeE
 		productFilter === 'gtin' || productFilter === 'articleNumber' ? productFilter : 'brand';
 	const label = { brand: 'Brand', gtin: 'GTIN', articleNumber: 'Article Number' }[filter];
 	// e.g. an expression that resolves to nothing
-	const value = String(this.getNodeParameter(filter, i, '') ?? '').trim();
+	const value = String(this.getNodeParameter(filter, i, '', { extractValue: true }) ?? '').trim();
 	if (!value) {
 		throw new NodeOperationError(this.getNode(), `${label} must not be empty`, { itemIndex: i });
 	}
 
 	const qs: IDataObject = { [filter]: value };
 	// A GTIN identifies a product across brands, an article number only within a brand
-	const brand = String(options.brand ?? '').trim();
-	if (filter === 'articleNumber' && brand) qs.brand = brand;
+	if (filter === 'articleNumber') {
+		const brand = String(
+			this.getNodeParameter('options.brand', i, '', { extractValue: true }) ?? '',
+		).trim();
+		if (brand) qs.brand = brand;
+	}
 
 	for (const key of [
 		'afterId',

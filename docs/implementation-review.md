@@ -25,7 +25,7 @@ Authentication matched the spec from the start: the token is sent as the `token`
 
 | Path | Contents |
 |---|---|
-| `nodes/FashionCloud/FashionCloud.node.ts` | Node definition, brand dropdown, dispatch to the operations |
+| `nodes/FashionCloud/FashionCloud.node.ts` | Node definition, brand list search, dispatch to the operations |
 | `nodes/FashionCloud/descriptions/*Description.ts` | UI fields, one file per resource |
 | `nodes/FashionCloud/actions/*.ts` | Operation logic, one file per resource; `index.ts` maps resource/operation to code |
 | `nodes/FashionCloud/GenericFunctions.ts` | Requests, Base URL, error mapping, pagination, date conversion |
@@ -52,7 +52,7 @@ Authentication matched the spec from the start: the token is sent as the `token`
 | Finding | Resolution |
 |---|---|
 | Brand/GTIN/article number all optional, so the default setup failed | "Filter By" choice (Brand / GTIN / Article Number) that shows only the field it needs. A search by article number can be limited to a brand under Options; a GTIN is looked up without a brand. Empty values are rejected before any request. |
-| Brand needed an ID from `/brands` | Dropdown loaded from `GET /v2/brands` (all pages, sorted by name); an ID can still be given by expression |
+| Brand needed an ID from `/brands` | Brand picker (resource locator): a searchable list loaded from `GET /v2/brands` (all pages, sorted by name), or an ID |
 | Wrong season values | Dropdown: Fall/Winter, Spring/Summer, NOS, No Season Assigned |
 | `seasonYear` had the wrong type | String; the description notes it's ignored for NOS |
 | `includePreliminary` described as products | Now "Include Preliminary Images" |
@@ -114,7 +114,7 @@ Checked and found in order: the token doesn't appear in execution error data (40
 
 | Operation | Implementation notes |
 |---|---|
-| Price → Get Many | Brand required (dropdown). Options: GTINs, Updated Since, Start After ID. Return All via `nextId` (200 per page). Uses the documented trailing slash `/v2/products/prices/`. |
+| Price → Get Many | Brand required (brand picker). Options: GTINs, Updated Since, Start After ID. Return All via `nextId` (200 per page). Uses the documented trailing slash `/v2/products/prices/`. |
 | Product → Get Stock | One GTIN per request (URL-encoded); the GTIN is added to the output because the response doesn't contain it |
 | Order → Create | See below |
 
@@ -133,12 +133,12 @@ Checked and found in order: the token doesn't appear in execution error data (40
 | Cap Limit at the API maximum | No cap | Pagination fetches pages at the allowed size, so larger limits work |
 | Keep `offset` for products (deprecated) | Replaced by "Start After ID" | The spec discourages `offset`; the cursor is the recommended way to resume |
 | "Simplify / include metadata" toggle | Not added | Nothing needed `totalElements` so far |
-| `resourceLocator` for brands | `options` dropdown with `loadOptions` | Simpler; an ID can still be given by expression |
+| `resourceLocator` for brands | Adopted on 2026-10-01 (first an `options` dropdown) | n8n marks an empty `options` dropdown with 'The value "" is not supported!', so the brand looked broken until one was picked. The list is also searchable. |
 | Order type selectable | Fixed to `endless-aisle` | The spec describes `b2b-order` as internal to Fashion Cloud |
 
 ## 5. Verification
 
-- **Automated:** 175 Vitest tests against an in-memory fake API that follows the spec (limits, pagination, required filters, documented error bodies). Every request is recorded, so tests check exact requests as well as output. Four planted bugs were each caught.
+- **Automated:** 179 Vitest tests against an in-memory fake API that follows the spec (limits, pagination, required filters, documented error bodies). Every request is recorded, so tests check exact requests as well as output. Four planted bugs were each caught.
 - **Real n8n (2.41.4, latest Docker image):** node, AI tool variant, credential and icons load, both as a mounted folder and as an installed `npm pack` tarball.
 - **Real API with a dummy token:** workflows for Brand → Get Many, Price → Get Many, Product → Get Stock and Order → Create (test order), plus the brand dropdown and the credential test, reach `api.fashion.cloud` and report `InvalidApiKeyError` correctly. Product → Get Many and Get Image were covered only by the automated tests.
 - **Mock server via Base URL:** credential test and workflows use the mock; credentials without a Base URL still go to the real API.

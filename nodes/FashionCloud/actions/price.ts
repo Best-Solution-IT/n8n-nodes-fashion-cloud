@@ -13,7 +13,7 @@ import {
 } from '../GenericFunctions';
 
 export async function getAll(this: IExecuteFunctions, i: number): Promise<INodeExecutionData[]> {
-	const brand = this.getNodeParameter('brand', i) as string;
+	const brand = String(this.getNodeParameter('brand', i, '', { extractValue: true }) ?? '').trim();
 	const returnAll = this.getNodeParameter('returnAll', i) as boolean;
 	const limit = returnAll ? Infinity : (this.getNodeParameter('limit', i) as number);
 	const options = this.getNodeParameter('priceOptions', i, {}) as IDataObject;

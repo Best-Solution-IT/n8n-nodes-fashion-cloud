@@ -1,11 +1,17 @@
 import { describe, expect, it } from 'vitest';
 
 import { createFakeApi, makePrices } from './helpers/fakeApi';
+import { resourceLocator } from './helpers/context';
 import { runNode, runNodeExpectingError } from './helpers/run';
 
 const api = createFakeApi({ prices: makePrices(450) });
 
-const getAll = { resource: 'price', operation: 'getAll', brand: 'brand-0001', priceOptions: {} };
+const getAll = {
+	resource: 'price',
+	operation: 'getAll',
+	brand: resourceLocator('brand-0001'),
+	priceOptions: {},
+};
 
 describe('Price → Get Many', () => {
 	it('pages through all prices with the nextId cursor', async () => {
@@ -65,7 +71,7 @@ describe('Price → Get Many', () => {
 
 	it('requires a brand before calling the API', async () => {
 		const { error, calls } = await runNodeExpectingError({
-			params: { ...getAll, brand: '', returnAll: true },
+			params: { ...getAll, brand: resourceLocator(''), returnAll: true },
 			api,
 		});
 

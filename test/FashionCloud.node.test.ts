@@ -159,20 +159,44 @@ describe('execute', () => {
 	});
 });
 
-describe('brand dropdown (getBrands)', () => {
+describe('brand list (searchBrands)', () => {
+	const searchBrands = new FashionCloud().methods.listSearch.searchBrands;
+
 	it('loads all brands across pages, sorted by name', async () => {
 		const { context, calls } = createLoadOptionsContext(createFakeApi({ brands: makeBrands(250) }));
 
-		const options = await new FashionCloud().methods.loadOptions.getBrands.call(context);
+		const { results } = await searchBrands.call(context);
 
-		expect(options).toHaveLength(250);
-		expect(options[0]).toEqual({ name: 'Brand 1', value: 'brand-0249' });
-		expect(options.map((o) => o.name)).toEqual(
-			[...options.map((o) => o.name)].sort((a, b) => a.localeCompare(b)),
+		expect(results).toHaveLength(250);
+		expect(results[0]).toEqual({ name: 'Brand 1', value: 'brand-0249' });
+		expect(results.map((o) => o.name)).toEqual(
+			[...results.map((o) => o.name)].sort((a, b) => a.localeCompare(b)),
 		);
 		expect(calls.map((c) => c.qs)).toEqual([
 			{ offset: 0, limit: 200 },
 			{ offset: 200, limit: 200 },
 		]);
+	});
+
+	it('filters by name or ID, ignoring case', async () => {
+		const { context } = createLoadOptionsContext(createFakeApi({ brands: makeBrands(250) }));
+
+		const byName = await searchBrands.call(context, ' bRaNd 12');
+		const byId = await searchBrands.call(context, 'BRAND-0001');
+
+		expect(byName.results.map((o) => o.name)).toEqual([
+			'Brand 12',
+			'Brand 120',
+			'Brand 121',
+			'Brand 122',
+			'Brand 123',
+			'Brand 124',
+			'Brand 125',
+			'Brand 126',
+			'Brand 127',
+			'Brand 128',
+			'Brand 129',
+		]);
+		expect(byId.results.map((o) => o.value)).toEqual(['brand-0001']);
 	});
 });

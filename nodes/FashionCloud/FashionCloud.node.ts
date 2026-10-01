@@ -2,7 +2,7 @@ import {
 	IExecuteFunctions,
 	ILoadOptionsFunctions,
 	INodeExecutionData,
-	INodePropertyOptions,
+	INodeListSearchResult,
 	INodeType,
 	INodeTypeDescription,
 	JsonObject,
@@ -71,8 +71,12 @@ export class FashionCloud implements INodeType {
 	};
 
 	methods = {
-		loadOptions: {
-			async getBrands(this: ILoadOptionsFunctions): Promise<INodePropertyOptions[]> {
+		listSearch: {
+			// The API has no name search, so all brands are loaded and filtered here
+			async searchBrands(
+				this: ILoadOptionsFunctions,
+				filter?: string,
+			): Promise<INodeListSearchResult> {
 				const brands = await fashionCloudApiRequestAllItems.call(
 					this,
 					'/v2/brands',
@@ -80,9 +84,16 @@ export class FashionCloud implements INodeType {
 					'offset',
 					PAGE_SIZE.brands,
 				);
-				return brands
+				const search = filter?.trim().toLowerCase() ?? '';
+				const results = brands
 					.map((entry) => ({ name: String(entry.name ?? entry._id), value: String(entry._id) }))
+					.filter(
+						(brand) =>
+							brand.name.toLowerCase().includes(search) ||
+							brand.value.toLowerCase().includes(search),
+					)
 					.sort((a, b) => a.name.localeCompare(b.name));
+				return { results };
 			},
 		},
 	};

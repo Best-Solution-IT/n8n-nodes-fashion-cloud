@@ -15,6 +15,8 @@ An n8n community node for the [Fashion Cloud API v2](https://api.fashion.cloud).
 
 List operations output one n8n item per entry (the API's `data` array is unwrapped).
 
+Brands are picked from a searchable list of the brands your account can access, or entered by ID.
+
 ### Orders
 
 - **Test Order** is on by default. Test orders are validated by Fashion Cloud but not placed. The toggle also overrides `isTest` in a JSON body.

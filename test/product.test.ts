@@ -5,6 +5,7 @@ import { describe, expect, it } from 'vitest';
 import { LANGUAGE_OPTIONS } from '../nodes/FashionCloud/descriptions/ProductDescription';
 import { FashionCloud } from '../nodes/FashionCloud/FashionCloud.node';
 import { createFakeApi, makeProducts } from './helpers/fakeApi';
+import { resourceLocator } from './helpers/context';
 import { runNode, runNodeExpectingError } from './helpers/run';
 
 const JPEG = Buffer.from([0xff, 0xd8, 0xff, 0xe0]);
@@ -42,7 +43,7 @@ describe('Product → Get Many', () => {
 			'limit',
 			'options',
 		]);
-		// An optional brand dropdown would show 'The value "" is not supported!' until one is picked
+		// An optional brand field outside of Options would always be on screen, even when unused
 		expect(
 			options
 				.filter((option) => NodeHelpers.displayParameter({}, option, null, description, params))
@@ -53,7 +54,12 @@ describe('Product → Get Many', () => {
 
 	it('pages through all products of a brand with the nextId cursor', async () => {
 		const { output, calls } = await runNode({
-			params: { ...getAll, returnAll: true, productFilter: 'brand', brand: 'brand-0001' },
+			params: {
+				...getAll,
+				returnAll: true,
+				productFilter: 'brand',
+				brand: resourceLocator('brand-0001'),
+			},
 			api,
 		});
 
@@ -76,8 +82,8 @@ describe('Product → Get Many', () => {
 				productFilter: 'gtin',
 				gtin: '4000000000042',
 				// left over from another filter
-				brand: 'brand-0002',
-				options: { brand: 'brand-0002' },
+				brand: resourceLocator('brand-0002'),
+				options: { brand: resourceLocator('brand-0002') },
 			},
 			api,
 		});
@@ -90,11 +96,15 @@ describe('Product → Get Many', () => {
 		const articleNumber = { ...getAll, returnAll: false, limit: 3, productFilter: 'articleNumber' };
 
 		const { calls: anyBrand } = await runNode({
-			params: { ...articleNumber, articleNumber: 'ART-1', brand: 'brand-0002' },
+			params: { ...articleNumber, articleNumber: 'ART-1', brand: resourceLocator('brand-0002') },
 			api,
 		});
 		const { calls: oneBrand } = await runNode({
-			params: { ...articleNumber, articleNumber: 'ART-1', options: { brand: ' brand-0001 ' } },
+			params: {
+				...articleNumber,
+				articleNumber: 'ART-1',
+				options: { brand: resourceLocator(' brand-0001 ', 'id') },
+			},
 			api,
 		});
 
@@ -104,7 +114,7 @@ describe('Product → Get Many', () => {
 
 	// e.g. an expression like {{ $json.gtin }} where the field is missing
 	it.each([
-		['brand', '', 'Brand must not be empty'],
+		['brand', resourceLocator(''), 'Brand must not be empty'],
 		['gtin', undefined, 'GTIN must not be empty'],
 		['gtin', '  ', 'GTIN must not be empty'],
 		['articleNumber', '', 'Article Number must not be empty'],
@@ -114,7 +124,7 @@ describe('Product → Get Many', () => {
 				...getAll,
 				returnAll: true,
 				productFilter,
-				brand: 'brand-0001',
+				brand: resourceLocator('brand-0001'),
 				[productFilter]: value,
 			},
 			api,
@@ -147,7 +157,7 @@ describe('Product → Get Many', () => {
 				returnAll: false,
 				limit: 1,
 				productFilter: 'brand',
-				brand: 'brand-0001',
+				brand: resourceLocator('brand-0001'),
 				options: {
 					afterId: 'product-00010',
 					lang: 'en',
@@ -195,7 +205,7 @@ describe('Product → Get Many', () => {
 				...getAll,
 				returnAll: true,
 				productFilter: 'brand',
-				brand: 'brand-0001',
+				brand: resourceLocator('brand-0001'),
 				options: { updatedSince: 'yesterday-ish' },
 			},
 			api,
