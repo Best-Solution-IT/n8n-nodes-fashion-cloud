@@ -88,7 +88,7 @@ Return All / Limit with offset pagination (200 per page), items unwrapped, optio
 - Migrated to n8n's official `@n8n/node-cli`: build, lint, dev mode and release (commit `84809f5`).
   - Strict mode with the default lint config, so the package is eligible for n8n Cloud verification.
   - Requires Node.js 24+ locally (tested with 24 and 26).
-- GitHub Actions workflows: `ci.yml` runs lint, tests with coverage and the build on every pull request; `publish.yml` runs the tests and publishes to npm with provenance, as n8n requires since May 2026.
+- GitHub Actions workflows: `ci.yml` runs lint, tests with coverage and the build on every pull request; `publish.yml` runs the tests and stages the version on npm with provenance, as n8n requires since May 2026; a maintainer approves it with 2FA to publish it (staged publishing since 2026-10-02, after 0.1.0 was published directly).
 - Placeholder metadata replaced. `index.ts` and the copy script removed (the CLI copies icons). `.gitignore` cleaned up.
 - **Tests:** 175 tests in `test/` (Vitest). Coverage is ~99% of lines and ~94% of branches, with thresholds so it can't silently drop (commit `a31fb50`).
 - Package renamed to `n8n-nodes-fashion-cloud`, the usual style for two-word brands (commit `bed3c32`).
