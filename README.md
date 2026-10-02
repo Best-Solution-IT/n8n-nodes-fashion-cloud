@@ -50,14 +50,19 @@ If you share the credential with other users, consider setting its **Allowed HTT
 ## Installation
 
 ### Via n8n Community Nodes (recommended)
-1. Go to **Settings → Community Nodes** in your n8n instance.
-2. Search for `n8n-nodes-fashion-cloud` and install.
+1. In your n8n instance, go to **Settings → Community Nodes** and click **Install a community node**.
+2. Enter `n8n-nodes-fashion-cloud` as the **npm Package Name**.
+3. Confirm the risk notice and click **Install**.
+
+Updates are offered on the same page. Instances that only allow packages verified by n8n, such as n8n Cloud, can install the node once n8n has verified it; it then also shows up when searching the nodes panel.
 
 ### Manual
+For example in Docker, in the directory where n8n keeps installed packages:
 ```bash
-# In your n8n custom nodes directory
-npm install n8n-nodes-fashion-cloud
+docker exec -u node <container> sh -c 'mkdir -p /home/node/.n8n/nodes && cd /home/node/.n8n/nodes && npm install --omit=dev --legacy-peer-deps --ignore-scripts n8n-nodes-fashion-cloud'
+docker restart <container>
 ```
+A package installed this way doesn't appear under **Settings → Community Nodes**; update it with the same command.
 
 ## Development
 
