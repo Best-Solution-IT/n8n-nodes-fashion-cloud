@@ -89,6 +89,7 @@ Return All / Limit with offset pagination (200 per page), items unwrapped, optio
   - Strict mode with the default lint config, so the package is eligible for n8n Cloud verification.
   - Requires Node.js 24+ locally (tested with 24 and 26).
 - GitHub Actions workflows: `ci.yml` runs lint, tests with coverage and the build on every pull request; `publish.yml` runs the tests and stages the version on npm with provenance, as n8n requires since May 2026; a maintainer approves it with 2FA to publish it (staged publishing since 2026-10-02, after 0.1.0 was published directly).
+  - The actions are pinned to commit SHAs. Dependabot (`.github/dependabot.yml`) proposes updates weekly in one grouped pull request, only for versions released at least 7 days earlier.
 - Placeholder metadata replaced. `index.ts` and the copy script removed (the CLI copies icons). `.gitignore` cleaned up.
 - **Tests:** 175 tests in `test/` (Vitest). Coverage is ~99% of lines and ~94% of branches, with thresholds so it can't silently drop (commit `a31fb50`).
 - Package renamed to `n8n-nodes-fashion-cloud`, the usual style for two-word brands (commit `bed3c32`).
@@ -166,7 +167,6 @@ Checked and found in order: the token doesn't appear in execution error data (40
 3. **First staged release:** staging through GitHub's OIDC and the approval have only been tried as a dry run. Watch the first Publish run after 0.1.0.
 
 ### Known limitations (not blocking)
-- The pinned GitHub Actions don't update themselves. Dependabot (`package-ecosystem: github-actions`) could keep the SHAs current.
 - `npm audit` reports 20 findings (15 high, 5 moderate; 12 on 2026-09-30), all in packages from n8n and in dev tooling: `axios` via `n8n-workflow`, `undici`, `proxy-agent` and `basic-ftp` via `release-it`, and `langchain`, `uuid`, `qs` and `stream-json` via the AI SDK that `@n8n/node-cli` pulls in. None of it ships: the package has no dependencies, and `n8n-workflow` is a peer dependency that n8n provides (which is why `--omit=dev` still lists it and `axios`). `npm audit fix` leaves all 20 in place, `--force` makes breaking version changes, and the `overrides` workaround is forbidden by the CLI's lint. The fixes have to come with updates of n8n's packages.
 - npm now skips dependencies' install scripts unless `allowScripts` in `package.json` approves them. None are needed: `isolated-vm` ships prebuilt binaries for Apple Silicon and Linux on Node 26, `ssh2` and `cpu-features` are optional speed-ups, `fsevents` and `unrs-resolver` only fall back to building, and `eslint-plugin-n8n-nodes-base` only enforces pnpm. Lint, tests, build and the release flow pass without them. On an Intel Mac, `isolated-vm` may need `npm install-scripts approve isolated-vm`.
 - Automatic hot reload in Docker (`N8N_DEV_RELOAD`) is unverified on macOS; it didn't fire in the sandbox. `POST /rest/dev/reload` works as a fallback.
