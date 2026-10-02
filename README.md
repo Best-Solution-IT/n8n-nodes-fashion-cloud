@@ -1,6 +1,6 @@
 # n8n-nodes-fashion-cloud
 
-An n8n community node for the [Fashion Cloud API v2](https://api.fashion.cloud).
+An n8n community node for the [Fashion Cloud API v2](https://docs.api.fashion.cloud/#fashion-cloud-api-v2).
 
 ## Resources & Operations
 
@@ -79,7 +79,7 @@ npm run test:watch     # re-run on change
 npm run test:coverage  # with coverage report
 ```
 
-The tests in `test/` run the node against an in-memory fake of the Fashion Cloud API (`test/helpers/fakeApi.ts`) that follows the OpenAPI spec in `docs/`: page size limits, offset/cursor pagination, required filters and the documented error bodies. Every API call the node makes is recorded, so tests check the exact requests as well as the output. CI runs them on every pull request and before publishing.
+The tests in `test/` run the node against an in-memory fake of the Fashion Cloud API (`test/helpers/fakeApi.ts`) that follows Fashion Cloud's OpenAPI spec for API v2: page size limits, offset/cursor pagination, required filters and the documented error bodies. Every API call the node makes is recorded, so tests check the exact requests as well as the output. CI runs them on every pull request and before publishing.
 
 ### Developing against n8n in Docker
 

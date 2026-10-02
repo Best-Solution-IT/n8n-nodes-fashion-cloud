@@ -1,12 +1,12 @@
 # Fashion Cloud node vs. API v2 spec — review and status
 
-**Status as of 2026-09-30 (commit `5998969`):** every endpoint in the spec is implemented, and every finding
+**Status as of 2026-09-30 (commit `bed3c32`):** every endpoint in the spec is implemented, and every finding
 from the original review has been resolved. What remains is release setup (GitHub move, npm publishing)
 and checks that need a real API token. See [Open points](#6-open-points).
 
-The original review compared the node at commit `33db456` (2026-03-25) with
-[`fashion-cloud-api-v2.json`](fashion-cloud-api-v2.json) (OpenAPI 3.0.3, 6 operations). The findings below
-keep their original numbering so they can still be traced.
+The original review compared the node at commit `775fc90` (2026-03-25) with Fashion Cloud's OpenAPI spec
+for API v2 (OpenAPI 3.0.3, 6 operations). The spec isn't part of this repository; it comes from Fashion
+Cloud. The findings below keep their original numbering so they can still be traced.
 
 ## 1. Coverage
 
@@ -57,7 +57,7 @@ Authentication matched the spec from the start: the token is sent as the `token`
 | `seasonYear` had the wrong type | String; the description notes it's ignored for NOS |
 | `includePreliminary` described as products | Now "Include Preliminary Images" |
 | README note about an upstream typo | Removed; the note was wrong |
-| `lang` was free text | Dropdown with the 26 languages documented by Fashion Cloud, default German (commit `dc0b587`) |
+| `lang` was free text | Dropdown with the 26 languages documented by Fashion Cloud, default German (commit `e30c858`) |
 | Limit defaults/maximums | Default 50; any limit works because pagination fetches pages at the allowed size |
 | `updatedSince` without a timezone | Converted to ISO 8601 UTC; values without a timezone use the workflow timezone (DST-aware) |
 
@@ -75,7 +75,7 @@ Return All / Limit with offset pagination (200 per page), items unwrapped, optio
 ### 2.6 Credential (medium) — ✅ resolved
 - Credential test: `GET /v2/brands?limit=1`.
 - `documentationUrl` points to Fashion Cloud's API documentation.
-- **Base URL** field, defaulting to `https://api.fashion.cloud`, used by all requests and the credential test, e.g. to test against a mock server (commit `b6ecc10`). Credentials saved before the field existed keep using the Fashion Cloud API. Invalid values are rejected before the token is sent anywhere: anything that isn't an http(s) URL, URLs with a user name, password, query or fragment, and `http://` for hosts that aren't local (see 2.9).
+- **Base URL** field, defaulting to `https://api.fashion.cloud`, used by all requests and the credential test, e.g. to test against a mock server (commit `43125b0`). Credentials saved before the field existed keep using the Fashion Cloud API. Invalid values are rejected before the token is sent anywhere: anything that isn't an http(s) URL, URLs with a user name, password, query or fragment, and `http://` for hosts that aren't local (see 2.9).
 
 ### 2.7 n8n conventions (low) — ✅ resolved
 - Singular resources (`brand`, `order`, `price`, `product`) and the standard `getAll` / "Get Many" naming.
@@ -85,13 +85,13 @@ Return All / Limit with offset pagination (200 per page), items unwrapped, optio
 - Light and dark icons for node and credential, plus a codex file (category "Sales").
 
 ### 2.8 Package and tooling (blocked publishing) — ✅ resolved
-- Migrated to n8n's official `@n8n/node-cli`: build, lint, dev mode and release (commit `9a377a1`).
+- Migrated to n8n's official `@n8n/node-cli`: build, lint, dev mode and release (commit `84809f5`).
   - Strict mode with the default lint config, so the package is eligible for n8n Cloud verification.
   - Requires Node.js 24+ locally (tested with 24 and 26).
 - GitHub Actions workflows: `ci.yml` runs lint, tests with coverage and the build on every pull request; `publish.yml` runs the tests and publishes to npm with provenance, as n8n requires since May 2026.
 - Placeholder metadata replaced. `index.ts` and the copy script removed (the CLI copies icons). `.gitignore` cleaned up.
-- **Tests:** 175 tests in `test/` (Vitest). Coverage is ~99% of lines and ~94% of branches, with thresholds so it can't silently drop (commit `6a2af46`).
-- Package renamed to `n8n-nodes-fashion-cloud`, the usual style for two-word brands (commit `5998969`).
+- **Tests:** 175 tests in `test/` (Vitest). Coverage is ~99% of lines and ~94% of branches, with thresholds so it can't silently drop (commit `a31fb50`).
+- Package renamed to `n8n-nodes-fashion-cloud`, the usual style for two-word brands (commit `bed3c32`).
 
 ### 2.9 Security review (2026-09-30) — ✅ resolved
 A later review ran the node in n8n 2.41.4 against a mock API. Each finding was reproduced there first and checked again after the fix.
@@ -110,7 +110,7 @@ A later review ran the node in n8n 2.41.4 against a mock API. Each finding was r
 
 Checked and found in order: the token doesn't appear in execution error data (401, 500, 502, connection refused, DNS failure) or in Continue On Fail output.
 
-## 3. Missing functionality — ✅ implemented (commit `5f3f3ab`)
+## 3. Missing functionality — ✅ implemented (commit `c4bc431`)
 
 | Operation | Implementation notes |
 |---|---|
@@ -170,10 +170,10 @@ Checked and found in order: the token doesn't appear in execution error data (40
 
 | Commit | Change |
 |---|---|
-| `33db456` | State at the original review |
-| `9a377a1` | Findings fixed, migration to `@n8n/node-cli` |
-| `5f3f3ab` | Price, Stock and Order endpoints |
-| `6a2af46` | Vitest test suite |
-| `dc0b587` | Language dropdown |
-| `b6ecc10` | Configurable Base URL |
-| `5998969` | Package renamed to `n8n-nodes-fashion-cloud` |
+| `775fc90` | State at the original review |
+| `84809f5` | Findings fixed, migration to `@n8n/node-cli` |
+| `c4bc431` | Price, Stock and Order endpoints |
+| `a31fb50` | Vitest test suite |
+| `e30c858` | Language dropdown |
+| `43125b0` | Configurable Base URL |
+| `bed3c32` | Package renamed to `n8n-nodes-fashion-cloud` |

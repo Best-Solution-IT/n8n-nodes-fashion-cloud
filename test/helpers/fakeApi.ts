@@ -3,7 +3,7 @@ import type { IDataObject } from 'n8n-workflow';
 import { type ApiCall, type ApiHandler, apiError } from './context';
 
 /**
- * In-memory Fashion Cloud API v2 following docs/fashion-cloud-api-v2.json:
+ * In-memory Fashion Cloud API v2 following Fashion Cloud's OpenAPI spec:
  * page size limits, offset/cursor pagination, required filters and the
  * documented error bodies.
  */

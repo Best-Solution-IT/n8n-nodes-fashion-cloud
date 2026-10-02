@@ -36,8 +36,7 @@ export class FashionCloudApi implements ICredentialType {
 		light: 'file:../icons/fashionCloud.svg',
 		dark: 'file:../icons/fashionCloud.dark.svg',
 	};
-	documentationUrl =
-		'https://www.notion.so/fashioncloud/Fashion-Cloud-API-ed2b17970caf4782a666a2f0661bd701';
+	documentationUrl = 'https://docs.api.fashion.cloud/#fashion-cloud-api-v2';
 	properties: INodeProperties[] = [
 		{
 			displayName: 'API Token',
