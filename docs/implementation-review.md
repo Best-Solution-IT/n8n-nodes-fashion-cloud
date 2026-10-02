@@ -1,8 +1,8 @@
 # Fashion Cloud node vs. API v2 spec — review and status
 
-**Status as of 2026-09-30 (commit `bed3c32`):** every endpoint in the spec is implemented, and every finding
-from the original review has been resolved. What remains is release setup (GitHub move, npm publishing)
-and checks that need a real API token. See [Open points](#6-open-points).
+**Status as of 2026-10-02 (release `0.1.0`):** every endpoint in the spec is implemented, every finding
+from the original review has been resolved, and 0.1.0 is published on npm with provenance. What remains
+are checks that need a real API token and n8n's verification. See [Open points](#6-open-points).
 
 The original review compared the node at commit `775fc90` (2026-03-25) with Fashion Cloud's OpenAPI spec
 for API v2 (OpenAPI 3.0.3, 6 operations). The spec isn't part of this repository; it comes from Fashion
@@ -147,19 +147,26 @@ Checked and found in order: the token doesn't appear in execution error data (40
 
 ## 6. Open points
 
-### Before the first release
-1. **Make the GitHub repo public.** The repo moved to [Best-Solution-IT/n8n-nodes-fashion-cloud](https://github.com/Best-Solution-IT/n8n-nodes-fashion-cloud) on 2026-09-30, and `package.json` and the codex file point there. It is still private: npm only publishes with provenance from public repositories, and the documentation links in the node lead to it.
-2. **Set up npm publishing**: Trusted Publisher on npmjs.com (workflow `publish.yml`), or an `NPM_TOKEN` repository secret. A brand-new package may need its first release via token. The name `n8n-nodes-fashion-cloud` was still free on npm on 2026-09-30.
-3. **Check with a real token** (e.g. in the dev container):
+### Release 0.1.0 (2026-10-02)
+- The repo [Best-Solution-IT/n8n-nodes-fashion-cloud](https://github.com/Best-Solution-IT/n8n-nodes-fashion-cloud) is public. Before that, the API spec and a private email address were removed from the whole history.
+- 0.1.0 was published from GitHub Actions with npm provenance (tag `0.1.0`, commit `465fe88`). The first run failed because npm only adds provenance to a new package when it's published as public; `publishConfig.access` fixed that.
+- `@n8n/scan-community-package` passes: provenance, source at `465fe88` and security checks. It needs Node 24 or older; on Node 26 it exits without output.
+- Installed from npm through the Community Nodes API in a fresh n8n 2.41.6, the node, its AI tool variant and the credential load; the credential test and Brand → Get Many work against a mock API.
+- Since commit `a33230c`, releases are staged: `publish.yml` runs `npm stage publish`, and a maintainer approves each version with 2FA. The trusted publisher on npm only allows staging.
+
+### Still open
+1. **Check with a real token** (e.g. in the dev container):
    - Price → Get Many with several GTINs. The spec doesn't define the format; the node sends them comma-separated.
    - A test order. Confirms the request body, including the fixed `type` and `clientType`.
    - Get Image with Watermark off (needs the `ecommerce` or `digitalWindow` permission).
    - Product → Get Many and Get Image, which haven't been run against the real API at all.
    - Product → Get Many by article number with the Brand option: check that the result is actually limited to that brand.
    - Successful responses in general: so far only error responses from the real API have been seen.
+2. **Submit for verification** in the n8n Creator Portal (see n8n's [submission guide](https://docs.n8n.io/integrations/creating-nodes/deploy/submit-community-nodes/)). Reviewers may need a way to test against the API, which requires an account that Fashion Cloud enabled for API access.
+3. **First staged release:** staging through GitHub's OIDC and the approval have only been tried as a dry run. Watch the first Publish run after 0.1.0.
 
 ### Known limitations (not blocking)
-- The pinned GitHub Actions don't update themselves. Once the repo is on GitHub, Dependabot (`package-ecosystem: github-actions`) can keep the SHAs current.
+- The pinned GitHub Actions don't update themselves. Dependabot (`package-ecosystem: github-actions`) could keep the SHAs current.
 - `npm audit` reports 20 findings (15 high, 5 moderate; 12 on 2026-09-30), all in packages from n8n and in dev tooling: `axios` via `n8n-workflow`, `undici`, `proxy-agent` and `basic-ftp` via `release-it`, and `langchain`, `uuid`, `qs` and `stream-json` via the AI SDK that `@n8n/node-cli` pulls in. None of it ships: the package has no dependencies, and `n8n-workflow` is a peer dependency that n8n provides (which is why `--omit=dev` still lists it and `axios`). `npm audit fix` leaves all 20 in place, `--force` makes breaking version changes, and the `overrides` workaround is forbidden by the CLI's lint. The fixes have to come with updates of n8n's packages.
 - npm now skips dependencies' install scripts unless `allowScripts` in `package.json` approves them. None are needed: `isolated-vm` ships prebuilt binaries for Apple Silicon and Linux on Node 26, `ssh2` and `cpu-features` are optional speed-ups, `fsevents` and `unrs-resolver` only fall back to building, and `eslint-plugin-n8n-nodes-base` only enforces pnpm. Lint, tests, build and the release flow pass without them. On an Intel Mac, `isolated-vm` may need `npm install-scripts approve isolated-vm`.
 - Automatic hot reload in Docker (`N8N_DEV_RELOAD`) is unverified on macOS; it didn't fire in the sandbox. `POST /rest/dev/reload` works as a fallback.
