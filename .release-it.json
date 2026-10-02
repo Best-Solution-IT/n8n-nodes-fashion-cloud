@@ -1,0 +1,22 @@
+{
+	"$schema": "https://unpkg.com/release-it@21/schema/release-it.json",
+	"git": {
+		"requireBranch": "main",
+		"requireCommits": true
+	},
+	"github": {
+		"release": true
+	},
+	"npm": {
+		"publish": false
+	},
+	"hooks": {
+		"before:init": "npm run lint && npm test && npm run build"
+	},
+	"plugins": {
+		"@release-it/keep-a-changelog": {
+			"addUnreleased": true,
+			"addVersionUrl": true
+		}
+	}
+}

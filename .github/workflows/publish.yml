@@ -8,7 +8,7 @@
 # ─── PREREQUISITES ─────────────────────────────────────────────────────────────
 #
 # @n8n/node-cli ≥ 0.23.0 is required. Earlier versions do not support the
-# provenance flag passed by `npm run release` in CI, and the publish step will
+# provenance flag passed by `n8n-node release` in CI, and the publish step will
 # fail. Check the version installed in this project with:
 #
 #   npm list @n8n/node-cli
@@ -45,12 +45,16 @@
 #
 # ─── RELEASE PROCESS ───────────────────────────────────────────────────────────
 #
-# Run the following command locally to start an interactive release:
+# Write the changes under "## [Unreleased]" in CHANGELOG.md, then run the
+# following command locally to start an interactive release:
 #
 #   npm run release
 #
-# This will lint, build, prompt for a version bump, update the changelog,
+# This runs release-it (config in .release-it.json): it will lint, test, build,
+# prompt for a version bump, turn the Unreleased section into the new version,
 # commit, tag, and push — which triggers this workflow to publish to npm.
+# `npm run release` is release-it only; this workflow calls `n8n-node release`
+# directly, which in CI lints, builds and publishes with provenance.
 
 name: Publish
 
@@ -98,6 +102,6 @@ jobs:
         #   .npmrc here before publishing.
         run: |
           [ -n "$NPM_TOKEN" ] && npm config set //registry.npmjs.org/:_authToken "$NPM_TOKEN"
-          npm run release
+          npx n8n-node release
         env:
           NPM_TOKEN: ${{ secrets.NPM_TOKEN }}

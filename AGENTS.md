@@ -77,8 +77,10 @@ project _may_ contain example nodes and/or credentials that need to be
 - **Always** address any lint/typecheck errors/warnings, unless there is a
   **very specific reason** to ignore/disable it
 - Make sure to use **proper types whenever possible**
-- If you are updating the npm package version, make sure to **update
-  CHANGELOG.md** in the root of the repository
+- For user-facing changes, **add an entry under `## [Unreleased]` in
+  CHANGELOG.md** in the root of the repository. Don't bump the version by
+  hand: `npm run release` (release-it, see `.release-it.json`) does it and
+  turns the Unreleased section into the new version
 - Read `.agents/workflow.md` for more info
 
 ## Context-specific docs

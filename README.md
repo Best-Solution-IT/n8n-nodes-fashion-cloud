@@ -125,8 +125,9 @@ docker restart <container>
 Community nodes must be published from GitHub Actions with npm provenance.
 
 1. On npmjs.com, add this repository as a **Trusted Publisher** for the package (workflow `publish.yml`), or set an `NPM_TOKEN` repository secret.
-2. Run `npm run release` locally. It bumps the version, updates `CHANGELOG.md`, commits, tags and pushes.
-3. The tag push triggers `.github/workflows/publish.yml`, which lints, builds and publishes with provenance.
+2. Describe the changes for users under `## [Unreleased]` in `CHANGELOG.md`. The release stops if that section is empty.
+3. Run `GITHUB_TOKEN=$(gh auth token) npm run release` locally on `main`. [release-it](https://github.com/release-it/release-it) (config in `.release-it.json`) lints, tests and builds, asks for the new version, renames the Unreleased section to that version, commits, tags, pushes and creates a GitHub release with the changelog entry as notes. Without `GITHUB_TOKEN` it prints a link to create the GitHub release in the browser instead.
+4. The tag push triggers `.github/workflows/publish.yml`, which runs `n8n-node release`: lint, build and publish with provenance.
 
 `npm publish` from a local machine is blocked on purpose (`prepublishOnly`).
 

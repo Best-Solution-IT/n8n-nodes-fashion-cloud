@@ -30,7 +30,7 @@
     "test": "tsc -p tsconfig.test.json && vitest run",
     "test:watch": "vitest",
     "test:coverage": "vitest run --coverage",
-    "release": "n8n-node release",
+    "release": "release-it",
     "prepublishOnly": "n8n-node prerelease"
   },
   "files": [
@@ -49,6 +49,7 @@
   },
   "devDependencies": {
     "@n8n/node-cli": "^0.50.3",
+    "@release-it/keep-a-changelog": "^8.0.1",
     "@vitest/coverage-v8": "^5.0.2",
     "eslint": "9.32.0",
     "prettier": "3.6.2",
