@@ -102,6 +102,7 @@ jobs:
         run: 'npm run build'
 
       - name: Stage on npm
+        id: stage
         # Stages the version with a provenance attestation (requires id-token: write above).
         # It isn't public until a maintainer approves it (see RELEASE PROCESS).
         # RELEASE_MODE lets the prepublishOnly guard (`n8n-node prerelease`) pass.
@@ -116,3 +117,32 @@ jobs:
         env:
           NPM_TOKEN: ${{ secrets.NPM_TOKEN }}
           RELEASE_MODE: 'true'
+
+      - name: Show why npm refused the login
+        # With Option A, npm swaps this run's GitHub identity (an OIDC token) for
+        # a short-lived npm token. When npm refuses, `npm stage publish` only
+        # reports ENEEDAUTH ("requires you to be logged in"); the reason is in
+        # npm's debug log. The claims are what npm compares with the package's
+        # trusted publisher (`npm trust list n8n-nodes-fashion-cloud`).
+        # The token itself is never printed, only these claims.
+        if: failure() && steps.stage.conclusion == 'failure'
+        run: |
+          echo 'npm debug log:'
+          # The newest log is the one of the staging attempt above
+          grep -h -i 'oidc' "$(ls -t ~/.npm/_logs/*-debug-0.log 2>/dev/null | head -n 1)" 2>/dev/null || echo 'no OIDC lines'
+          echo 'GitHub identity of this run:'
+          node -e '
+            const { ACTIONS_ID_TOKEN_REQUEST_URL: url, ACTIONS_ID_TOKEN_REQUEST_TOKEN: bearer } = process.env;
+            if (!url) {
+              console.log("no OIDC token available (id-token: write missing?)");
+              process.exit(0);
+            }
+            fetch(`${url}&audience=npm:registry.npmjs.org`, { headers: { Authorization: `Bearer ${bearer}` } })
+              .then((response) => response.json())
+              .then(({ value }) => {
+                const claims = JSON.parse(Buffer.from(value.split(".")[1], "base64url"));
+                const names = ["repository", "repository_visibility", "workflow_ref", "ref", "environment", "runner_environment"];
+                for (const name of names) console.log(`${name}: ${claims[name] ?? "(not set)"}`);
+              })
+              .catch((error) => console.log(`could not read the OIDC token: ${error.message}`));
+          '
