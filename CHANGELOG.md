@@ -4,6 +4,8 @@ All notable changes to this package are documented here. The format follows [Kee
 
 ## [Unreleased]
 
+## [0.1.1] - 2026-11-13
+
 ### Fixed
 
 - The codex file now identifies the node as `n8n-nodes-fashion-cloud.fashionCloud`, as n8n requires for verification, instead of by the package name alone
@@ -12,5 +14,6 @@ All notable changes to this package are documented here. The format follows [Kee
 
 - Initial release: Brand → Get Many, Product → Get Many / Get Image / Get Stock, Price → Get Many, Order → Create
 
-[Unreleased]: https://github.com/Best-Solution-IT/n8n-nodes-fashion-cloud/compare/0.1.0...HEAD
+[Unreleased]: https://github.com/Best-Solution-IT/n8n-nodes-fashion-cloud/compare/0.1.1...HEAD
+[0.1.1]: https://github.com/Best-Solution-IT/n8n-nodes-fashion-cloud/compare/0.1.0...0.1.1
 [0.1.0]: https://github.com/Best-Solution-IT/n8n-nodes-fashion-cloud/releases/tag/0.1.0

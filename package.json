@@ -1,6 +1,6 @@
 {
   "name": "n8n-nodes-fashion-cloud",
-  "version": "0.1.0",
+  "version": "0.1.1",
   "description": "n8n community node for the Fashion Cloud API v2 (brands, products, images, stock, prices, orders)",
   "license": "MIT",
   "homepage": "https://github.com/Best-Solution-IT/n8n-nodes-fashion-cloud",
