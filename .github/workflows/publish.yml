@@ -10,11 +10,17 @@
 #
 # The runner's npm needs the `stage` command (npm 11.19.0, which Node's lts/*
 # brought in October 2026, has it). `n8n-node release` isn't used here: in CI it
-# runs a plain `npm publish`, which the trusted publisher doesn't allow.
+# runs a plain `npm publish`, which neither option below allows.
 #
 # ─── ONE-TIME SETUP ────────────────────────────────────────────────────────────
 #
-# Option A — OIDC Trusted Publishing (recommended, no long-lived secrets):
+# This repository uses Option B for now. Option A is set up as well, but npm
+# refuses the login: its registry answers "package not found" to the immutable
+# OIDC subject claims that GitHub gives every repository created after
+# 2026-07-15 (https://github.com/npm/cli/issues/9969). Once npm accepts them,
+# delete the NPM_TOKEN secret and the trusted publisher takes over.
+#
+# Option A — OIDC Trusted Publishing (preferred, no long-lived secrets):
 #   1. Log in to npmjs.com and open your package's settings.
 #   2. Under "Publish access" → "Trusted Publishers", click "Add a publisher".
 #   3. Select GitHub Actions and fill in:
@@ -27,11 +33,13 @@
 #   5. Leave the NPM_TOKEN secret unset in this repository. GitHub's OIDC
 #      token is used instead — no secret ever touches your repo settings.
 #
-# Option B — npm Automation Token (fallback):
-#   1. On npmjs.com: Access Tokens → Generate New Token → Granular Access Token.
-#      Scope it to this package with "Read and write" publish permission.
+# Option B — npm access token that can only stage:
+#   1. On npmjs.com: Access Tokens → Generate New Token. Leave "Bypass
+#      two-factor authentication" unchecked, choose the permission "Read and
+#      write (stage only)" and limit the token to this package.
 #   2. In GitHub: Settings → Secrets and variables → Actions → New secret.
-#      Name it NPM_TOKEN and paste the token value.
+#      Name it NPM_TOKEN and paste the token value. Replace it when the token
+#      expires.
 #
 # Both options work with --provenance. Provenance is signed by GitHub's OIDC
 # infrastructure regardless of how npm authentication is handled.
@@ -141,7 +149,7 @@ jobs:
               .then((response) => response.json())
               .then(({ value }) => {
                 const claims = JSON.parse(Buffer.from(value.split(".")[1], "base64url"));
-                const names = ["repository", "repository_visibility", "workflow_ref", "ref", "environment", "runner_environment"];
+                const names = ["sub", "repository", "repository_visibility", "workflow_ref", "ref", "environment", "runner_environment"];
                 for (const name of names) console.log(`${name}: ${claims[name] ?? "(not set)"}`);
               })
               .catch((error) => console.log(`could not read the OIDC token: ${error.message}`));

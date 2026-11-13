@@ -129,7 +129,9 @@ docker restart <container>
 
 Community nodes must be published from GitHub Actions with npm provenance.
 
-1. On npmjs.com, add this repository as a **Trusted Publisher** for the package (workflow `publish.yml`) and leave **Allow npm publish** unchecked, so the workflow can only stage versions.
+1. Give the workflow a way to stage versions on npm, and nothing more:
+   - **In use now:** an npm access token with the permission **Read and write (stage only)**, limited to this package and without 2FA bypass, stored as the repository secret `NPM_TOKEN`. Replace it when it expires.
+   - **Preferred once npm supports it:** a **Trusted Publisher** for the package (workflow `publish.yml`, **Allow npm publish** unchecked) and no `NPM_TOKEN` secret. The entry exists, but npm refuses this repository's logins until [npm/cli#9969](https://github.com/npm/cli/issues/9969) is fixed.
 2. Describe the changes for users under `## [Unreleased]` in `CHANGELOG.md`. The release stops if that section is empty.
 3. Run `GITHUB_TOKEN=$(gh auth token) npm run release` locally on `main`. [release-it](https://github.com/release-it/release-it) (config in `.release-it.json`) lints, tests and builds, asks for the new version, renames the Unreleased section to that version, commits, tags, pushes and creates a GitHub release with the changelog entry as notes. Without `GITHUB_TOKEN` it prints a link to create the GitHub release in the browser instead.
 4. The tag push triggers `.github/workflows/publish.yml`, which tests, lints and builds, then stages the version on npm with provenance (`npm stage publish`). A staged version isn't public yet.

@@ -155,6 +155,12 @@ Checked and found in order: the token doesn't appear in execution error data (40
 - Installed from npm through the Community Nodes API in a fresh n8n 2.41.6, the node, its AI tool variant and the credential load; the credential test and Brand → Get Many work against a mock API.
 - Since commit `a33230c`, releases are staged: `publish.yml` runs `npm stage publish`, and a maintainer approves each version with 2FA. The trusted publisher on npm only allows staging.
 
+### Release 0.1.1 (2026-11-13)
+- 0.1.1 contains the one change n8n's first review asked for: the codex file's `node` field is now `n8n-nodes-fashion-cloud.fashionCloud`. A test covers it, because n8n's lint (checked up to `@n8n/node-cli` 0.56.3) doesn't.
+- It is the first staged release: published from GitHub Actions with npm provenance (tag `0.1.1`, commit `13d482f`) and approved with 2FA. `@n8n/scan-community-package` 0.43.0 passes.
+- Staging through the trusted publisher failed with `ENEEDAUTH`. npm's registry answers "package not found" to the immutable OIDC subject claims that GitHub gives every repository created after 2026-07-15, this one included ([npm/cli#9969](https://github.com/npm/cli/issues/9969)). The workflow now stages with an access token that can only stage (`NPM_TOKEN` secret), so every version still needs the 2FA approval.
+- `publish.yml` has a step that runs only after a failed staging attempt and prints npm's hidden reason and the identity claims npm compares. The tag was moved from the release commit `3ceb61b` to `13d482f` to get that step into the run.
+
 ### Still open
 1. **Check with a real token** (e.g. in the dev container):
    - Price → Get Many with several GTINs. The spec doesn't define the format; the node sends them comma-separated.
@@ -163,8 +169,8 @@ Checked and found in order: the token doesn't appear in execution error data (40
    - Product → Get Many and Get Image, which haven't been run against the real API at all.
    - Product → Get Many by article number with the Brand option: check that the result is actually limited to that brand.
    - Successful responses in general: so far only error responses from the real API have been seen.
-2. **n8n verification:** the node is submitted in the Creator Portal (see n8n's [submission guide](https://docs.n8n.io/integrations/creating-nodes/deploy/submit-community-nodes/)). The first review (2026-11-13) asked for one change: the codex file's `node` field has to be `n8n-nodes-fashion-cloud.fashionCloud`, not the package name alone. That's fixed and covered by a test, because n8n's lint (checked up to `@n8n/node-cli` 0.56.3) doesn't catch it. Still to do: release the fix and confirm the new version in the portal. Reviewers may need a way to test against the API, which requires an account that Fashion Cloud enabled for API access.
-3. **First staged release:** staging through GitHub's OIDC and the approval have only been tried as a dry run. Watch the first Publish run after 0.1.0.
+2. **n8n verification:** the node is submitted in the Creator Portal (see n8n's [submission guide](https://docs.n8n.io/integrations/creating-nodes/deploy/submit-community-nodes/)). The first review (2026-11-13) asked for the codex fix that 0.1.1 contains; the second review follows once 0.1.1 is confirmed in the portal. Reviewers may need a way to test against the API, which requires an account that Fashion Cloud enabled for API access.
+3. **Back to the trusted publisher:** once [npm/cli#9969](https://github.com/npm/cli/issues/9969) is fixed, delete the `NPM_TOKEN` secret and revoke the token on npm. The trusted publisher entry is already in place. Until then, replace the token when it expires.
 
 ### Known limitations (not blocking)
 - `npm audit` reports 20 findings (15 high, 5 moderate; 12 on 2026-09-30), all in packages from n8n and in dev tooling: `axios` via `n8n-workflow`, `undici`, `proxy-agent` and `basic-ftp` via `release-it`, and `langchain`, `uuid`, `qs` and `stream-json` via the AI SDK that `@n8n/node-cli` pulls in. None of it ships: the package has no dependencies, and `n8n-workflow` is a peer dependency that n8n provides (which is why `--omit=dev` still lists it and `axios`). `npm audit fix` leaves all 20 in place, `--force` makes breaking version changes, and the `overrides` workaround is forbidden by the CLI's lint. The fixes have to come with updates of n8n's packages.
