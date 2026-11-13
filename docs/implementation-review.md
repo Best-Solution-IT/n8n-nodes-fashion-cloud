@@ -139,7 +139,7 @@ Checked and found in order: the token doesn't appear in execution error data (40
 
 ## 5. Verification
 
-- **Automated:** 179 Vitest tests against an in-memory fake API that follows the spec (limits, pagination, required filters, documented error bodies). Every request is recorded, so tests check exact requests as well as output. Four planted bugs were each caught.
+- **Automated:** 180 Vitest tests against an in-memory fake API that follows the spec (limits, pagination, required filters, documented error bodies). Every request is recorded, so tests check exact requests as well as output. Four planted bugs were each caught.
 - **Real n8n (2.41.4, latest Docker image):** node, AI tool variant, credential and icons load, both as a mounted folder and as an installed `npm pack` tarball.
 - **Real API with a dummy token:** workflows for Brand → Get Many, Price → Get Many, Product → Get Stock and Order → Create (test order), plus the brand dropdown and the credential test, reach `api.fashion.cloud` and report `InvalidApiKeyError` correctly. Product → Get Many and Get Image were covered only by the automated tests.
 - **Mock server via Base URL:** credential test and workflows use the mock; credentials without a Base URL still go to the real API.
@@ -163,7 +163,7 @@ Checked and found in order: the token doesn't appear in execution error data (40
    - Product → Get Many and Get Image, which haven't been run against the real API at all.
    - Product → Get Many by article number with the Brand option: check that the result is actually limited to that brand.
    - Successful responses in general: so far only error responses from the real API have been seen.
-2. **Submit for verification** in the n8n Creator Portal (see n8n's [submission guide](https://docs.n8n.io/integrations/creating-nodes/deploy/submit-community-nodes/)). Reviewers may need a way to test against the API, which requires an account that Fashion Cloud enabled for API access.
+2. **n8n verification:** the node is submitted in the Creator Portal (see n8n's [submission guide](https://docs.n8n.io/integrations/creating-nodes/deploy/submit-community-nodes/)). The first review (2026-11-13) asked for one change: the codex file's `node` field has to be `n8n-nodes-fashion-cloud.fashionCloud`, not the package name alone. That's fixed and covered by a test, because n8n's lint (checked up to `@n8n/node-cli` 0.56.3) doesn't catch it. Still to do: release the fix and confirm the new version in the portal. Reviewers may need a way to test against the API, which requires an account that Fashion Cloud enabled for API access.
 3. **First staged release:** staging through GitHub's OIDC and the approval have only been tried as a dry run. Watch the first Publish run after 0.1.0.
 
 ### Known limitations (not blocking)

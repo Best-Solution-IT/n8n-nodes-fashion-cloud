@@ -4,6 +4,8 @@ import { describe, expect, it } from 'vitest';
 
 import { handlers } from '../nodes/FashionCloud/actions';
 import { FashionCloud } from '../nodes/FashionCloud/FashionCloud.node';
+import codex from '../nodes/FashionCloud/FashionCloud.node.json';
+import packageJson from '../package.json';
 import { createLoadOptionsContext } from './helpers/context';
 import { createFakeApi, makeBrands } from './helpers/fakeApi';
 import { runNode, runNodeExpectingError } from './helpers/run';
@@ -50,6 +52,11 @@ describe('node description', () => {
 
 	it('uses the credential defined in this package', () => {
 		expect(description.credentials).toEqual([{ name: 'fashionCloudApi', required: true }]);
+	});
+
+	it('is identified in the codex file by package name and node name', () => {
+		// n8n's verification requires the full node type here: <package name>.<node name>
+		expect(codex.node).toBe(`${packageJson.name}.${description.name}`);
 	});
 });
 
